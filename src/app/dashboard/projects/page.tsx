@@ -306,7 +306,7 @@ export default function ProjectsPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Budget ($)
+                    Budget (₱)
                   </label>
                   <input
                     type="number"
@@ -340,7 +340,7 @@ export default function ProjectsPage() {
                     type="text"
                     value={newCity}
                     onChange={(e) => setNewCity(e.target.value)}
-                    placeholder="City"
+                    placeholder="e.g. Manila, Taguig, Cebu"
                     className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
