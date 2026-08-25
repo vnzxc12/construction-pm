@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { BRAND_CONFIG } from "@/lib/brand.config";
 
 export const metadata: Metadata = {
-  title: "BuildPulse | Construction Project Management",
-  description: "Next-generation construction project management, field daily logs, task scheduling, blueprints, punch list, and cost control.",
+  title: BRAND_CONFIG.appTitle,
+  description: BRAND_CONFIG.appDescription,
 };
 
 export default function RootLayout({

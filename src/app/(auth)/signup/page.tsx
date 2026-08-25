@@ -3,15 +3,16 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { HardHat, Lock, Mail, User, Building, ArrowRight, ShieldCheck } from "lucide-react";
+import { Lock, Mail, User, Building, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { UserRole } from "@/types/database";
+import { BRAND_CONFIG } from "@/lib/brand.config";
 
 export default function SignupPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [company, setCompany] = useState("");
+  const [company, setCompany] = useState(BRAND_CONFIG.companyName);
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("project_manager");
   const [loading, setLoading] = useState(false);
@@ -34,20 +35,21 @@ export default function SignupPage() {
     });
 
     if (error) {
-      console.warn("Supabase Signup notice / demo fallback:", error.message);
+      alert(`Signup notice: ${error.message}`);
+    } else {
+      router.push("/dashboard");
     }
-    router.push("/dashboard");
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-amber-500 selection:text-slate-950">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex w-12 h-12 rounded-xl bg-amber-500 items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20 mb-4">
-          <HardHat className="w-7 h-7" />
+        <div className="inline-flex w-14 h-14 rounded-2xl bg-amber-500 items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20 mb-4 font-black text-xl tracking-tighter">
+          {BRAND_CONFIG.initials}
         </div>
-        <h2 className="text-3xl font-extrabold text-white tracking-tight">Create BuildPulse Account</h2>
-        <p className="mt-2 text-sm text-slate-400">Join your construction team workspace</p>
+        <h2 className="text-3xl font-extrabold text-white tracking-tight">Create Account</h2>
+        <p className="mt-2 text-sm text-slate-400">Join the {BRAND_CONFIG.companyName} Team Portal</p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
@@ -65,7 +67,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  placeholder="e.g. Marcus Vance"
+                  placeholder="e.g. Architect Juan Dela Cruz"
                 />
               </div>
             </div>
@@ -82,14 +84,14 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  placeholder="name@company.com"
+                  placeholder="name@mbsdesign.com"
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Company / Contractor Name
+                Organization / Practice
               </label>
               <div className="mt-1.5 relative">
                 <Building className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
@@ -98,25 +100,24 @@ export default function SignupPage() {
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  placeholder="e.g. Apex Builders Group"
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Role on Job Site
+                Project Role
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="mt-1.5 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="mt-1.5 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
               >
-                <option value="project_manager">Project Manager (General Contractor)</option>
-                <option value="superintendent">Superintendent / Field Engineer</option>
-                <option value="subcontractor">Trade Subcontractor</option>
-                <option value="client">Owner / Client Representative</option>
-                <option value="safety_officer">Safety Compliance Officer</option>
+                <option value="project_manager">Lead Architect / Project Manager</option>
+                <option value="superintendent">Site Supervisor / Field Engineer</option>
+                <option value="subcontractor">Trade Contractor (Fitout, MEP, Finishes)</option>
+                <option value="client">Client / Property Owner</option>
+                <option value="safety_officer">QA/QC Safety Inspector</option>
               </select>
             </div>
 
@@ -140,7 +141,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg shadow-sm text-sm font-bold text-slate-950 bg-amber-500 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors mt-2"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg shadow-sm text-sm font-bold text-slate-950 bg-amber-500 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors mt-2 cursor-pointer"
             >
               {loading ? "Creating Account..." : "Create Account"}
               <ArrowRight className="w-4 h-4" />

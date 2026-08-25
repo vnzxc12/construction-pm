@@ -15,10 +15,12 @@ import {
   DollarSign,
   Settings,
   FolderOpen,
+  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Project } from "@/types/database";
+import { BRAND_CONFIG } from "@/lib/brand.config";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -33,7 +35,6 @@ export function Sidebar() {
         .order("created_at", { ascending: false });
 
       if (projects && projects.length > 0) {
-        // Find project from URL if inside /projects/[id]
         const matched = projects.find((p) => pathname.includes(p.id));
         setActiveProject(matched || projects[0]);
       } else {
@@ -112,18 +113,29 @@ export function Sidebar() {
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 h-screen sticky top-0 border-r border-slate-800 z-30">
       {/* Brand Header */}
       <div className="h-16 flex items-center px-5 border-b border-slate-800 gap-3 bg-slate-950">
-        <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 shadow-md">
-          <HardHat className="w-5 h-5 font-bold" />
-        </div>
-        <div>
-          <span className="font-bold text-white tracking-wide text-base">BuildPulse</span>
-          <span className="block text-[10px] text-amber-400 uppercase tracking-widest font-semibold">Pro Construction</span>
+        {BRAND_CONFIG.logoUrl ? (
+          <img
+            src={BRAND_CONFIG.logoUrl}
+            alt={BRAND_CONFIG.companyName}
+            className="w-9 h-9 rounded-lg object-contain bg-white p-1"
+          />
+        ) : (
+          <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 shadow-md font-extrabold text-sm tracking-tighter">
+            {BRAND_CONFIG.initials}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <span className="font-bold text-white tracking-tight text-sm block truncate">
+            {BRAND_CONFIG.companyName}
+          </span>
+          <span className="block text-[9px] text-amber-400 uppercase tracking-widest font-semibold truncate">
+            {BRAND_CONFIG.tagline}
+          </span>
         </div>
       </div>
 
       {/* Navigation Groups */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {/* Global Links */}
         <div>
           <div className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Operations
@@ -178,7 +190,7 @@ export function Sidebar() {
           <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-800 text-xs text-slate-400">
             <span className="font-bold text-slate-300 block mb-1">No Active Projects</span>
             <p className="text-[11px] leading-relaxed">
-              Create a project to unlock site daily logs, blueprints, and task boards.
+              Create a project to access site logs and blueprint drawing sets.
             </p>
             <Link
               href="/dashboard/projects"
@@ -190,7 +202,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Footer / Settings */}
+      {/* Footer */}
       <div className="p-3 border-t border-slate-800 bg-slate-950/60">
         <Link
           href="/dashboard/settings"
@@ -202,7 +214,7 @@ export function Sidebar() {
           )}
         >
           <Settings className="w-4 h-4" />
-          <span>Settings & Supabase</span>
+          <span>Settings & Portal</span>
         </Link>
       </div>
     </aside>
