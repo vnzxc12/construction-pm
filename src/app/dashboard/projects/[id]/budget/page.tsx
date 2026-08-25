@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  DollarSign,
+  Coins,
   TrendingUp,
   PieChart,
   Plus,
@@ -122,7 +122,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
         </div>
       ) : lineItems.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
-          <DollarSign className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+          <Coins className="w-10 h-10 text-slate-400 mx-auto mb-2" />
           <h3 className="text-base font-bold text-slate-900">No CSI Cost Line Items Yet</h3>
           <p className="text-xs text-slate-500 mt-1">
             Budget line items will be populated from your CSI schedule and change orders.

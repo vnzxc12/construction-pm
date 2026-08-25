@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   HelpCircle,
   TrendingUp,
-  DollarSign,
   ShieldCheck,
   ArrowUpRight,
   HardHat,
@@ -17,6 +16,7 @@ import {
   Plus,
   Loader2,
 } from "lucide-react";
+import { PesoIcon } from "@/components/ui/peso-icon";
 import { createClient } from "@/lib/supabase/client";
 import { Project, Task, PunchItem, RFI } from "@/types/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -111,7 +111,7 @@ export default function ExecutiveDashboard() {
             </div>
           </div>
 
-          {/* Portfolio Budget */}
+          {/* Portfolio Budget - Changed to PesoIcon */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -124,8 +124,8 @@ export default function ExecutiveDashboard() {
                 {budgetUtilization}% of {formatCurrency(totalBudget)}
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <DollarSign className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xl">
+              <PesoIcon className="w-6 h-6" />
             </div>
           </div>
 

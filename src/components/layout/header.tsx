@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Bell, Search, PlusCircle, LogOut, Building2 } from "lucide-react";
+import { Bell, Search, PlusCircle, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project } from "@/types/database";
 
@@ -18,57 +18,88 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [profile, setProfile] = useState<UserProfile>({
-    name: "Loading...",
-    email: "",
+    name: "Admin",
+    email: "vonn@test.com",
     role: "admin",
   });
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
   useEffect(() => {
-    async function loadData() {
-      const supabase = createClient();
+    const supabase = createClient();
 
-      // 1. Fetch Auth User & Profile
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+    async function loadData() {
+      try {
+        // 1. Fetch Auth User & Profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: dbProfile } = await supabase
+            .from("profiles")
+            .select("full_name, email, role, avatar_url")
+            .eq("id", user.id)
+            .single();
+
+          if (dbProfile) {
+            setProfile({
+              name: dbProfile.full_name || user.email?.split("@")[0] || "Admin",
+              email: dbProfile.email || user.email || "",
+              role: dbProfile.role || "admin",
+              avatarUrl: dbProfile.avatar_url,
+            });
+          } else {
+            const metaName = user.user_metadata?.full_name;
+            setProfile({
+              name: metaName || user.email?.split("@")[0] || "Admin",
+              email: user.email || "",
+              role: (user.user_metadata?.role as string) || "admin",
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load user profile:", err);
+      }
+
+      // 2. Fetch Projects
+      try {
+        const { data: projectList } = await supabase
+          .from("projects")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (projectList && projectList.length > 0) {
+          setProjects(projectList);
+          const matched = projectList.find((p) => pathname.includes(p.id));
+          setSelectedProjectId(matched ? matched.id : projectList[0].id);
+        }
+      } catch (err) {
+        console.warn("Could not load projects list:", err);
+      }
+    }
+
+    loadData();
+
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const user = session.user;
         const { data: dbProfile } = await supabase
           .from("profiles")
           .select("full_name, email, role, avatar_url")
           .eq("id", user.id)
           .single();
 
-        if (dbProfile) {
-          setProfile({
-            name: dbProfile.full_name || user.email?.split("@")[0] || "User",
-            email: dbProfile.email || user.email || "",
-            role: dbProfile.role || "admin",
-            avatarUrl: dbProfile.avatar_url,
-          });
-        } else {
-          setProfile({
-            name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-            email: user.email || "",
-            role: (user.user_metadata?.role as string) || "admin",
-          });
-        }
+        setProfile({
+          name: dbProfile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Admin",
+          email: dbProfile?.email || user.email || "",
+          role: dbProfile?.role || (user.user_metadata?.role as string) || "admin",
+          avatarUrl: dbProfile?.avatar_url,
+        });
       }
+    });
 
-      // 2. Fetch Projects from Supabase
-      const { data: projectList } = await supabase
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (projectList && projectList.length > 0) {
-        setProjects(projectList);
-        // Match current route project ID or default to first
-        const matched = projectList.find(p => pathname.includes(p.id));
-        setSelectedProjectId(matched ? matched.id : projectList[0].id);
-      }
-    }
-
-    loadData();
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [pathname]);
 
   const handleSignOut = async () => {
@@ -82,7 +113,7 @@ export function Header() {
   };
 
   const getInitials = (name: string) => {
-    if (!name || name === "Loading...") return "U";
+    if (!name) return "AD";
     const parts = name.trim().split(" ");
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
@@ -161,8 +192,8 @@ export function Header() {
             <span className="block text-xs font-semibold text-slate-900 leading-tight">
               {profile.name}
             </span>
-            <span className="block text-[10px] text-slate-500 capitalize">
-              {profile.role.replace("_", " ")}
+            <span className="block text-[10px] text-slate-500 uppercase font-semibold">
+              {profile.role?.replace("_", " ")}
             </span>
           </div>
           <button

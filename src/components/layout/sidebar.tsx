@@ -12,7 +12,7 @@ import {
   FileSpreadsheet,
   AlertCircle,
   HelpCircle,
-  DollarSign,
+  Coins,
   Settings,
   FolderOpen,
   Compass,
@@ -103,7 +103,7 @@ export function Sidebar() {
         {
           name: "Budget & Financials",
           href: `/dashboard/projects/${projectId}/budget`,
-          icon: DollarSign,
+          icon: Coins,
           active: pathname.includes(`/projects/${projectId}/budget`),
         },
       ]

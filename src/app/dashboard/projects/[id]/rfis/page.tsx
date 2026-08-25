@@ -5,7 +5,7 @@ import {
   HelpCircle,
   Plus,
   Search,
-  DollarSign,
+  Coins,
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -145,7 +145,7 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
               : "border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          <DollarSign className="w-4 h-4 text-emerald-500" />
+          <Coins className="w-4 h-4 text-emerald-500" />
           <span>Change Orders Log ({changeOrders.length})</span>
         </button>
       </div>
@@ -231,7 +231,7 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
         )
       ) : (
         <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
-          <DollarSign className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+          <Coins className="w-10 h-10 text-slate-400 mx-auto mb-2" />
           <h3 className="text-base font-bold text-slate-900">No Change Orders on File</h3>
           <p className="text-xs text-slate-500 mt-1">
             Approved scope modifications will appear here.

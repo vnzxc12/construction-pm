@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Building2,
   Calendar,
-  DollarSign,
   MapPin,
   Users,
   CheckCircle2,
