@@ -127,7 +127,7 @@ export interface DailyLog {
   id: string;
   project_id: string;
   log_date: string;
-  author_id: string;
+  author_id?: string;
   author?: Profile;
   weather_condition?: string;
   temp_high?: number;
@@ -138,6 +138,18 @@ export interface DailyLog {
   safety_incidents?: string;
   visitors_log?: string;
   crews?: DailyLogCrew[];
+  created_at: string;
+}
+
+export interface ProjectExpense {
+  id: string;
+  project_id: string;
+  title: string;
+  category: string;
+  amount: number;
+  payment_date: string;
+  paid_to?: string;
+  notes?: string;
   created_at: string;
 }
 
@@ -153,7 +165,6 @@ export interface DrawingDocument {
   storage_path: string;
   description?: string;
   uploaded_by?: string;
-  uploader?: Profile;
   created_at: string;
 }
 
@@ -169,9 +180,7 @@ export interface RFI {
   impact_days: number;
   cost_estimate: number;
   assigned_to?: string;
-  assignee?: Profile;
-  submitted_by: string;
-  submitter?: Profile;
+  submitted_by?: string;
   official_answer?: string;
   answered_by?: string;
   due_date?: string;
@@ -189,9 +198,7 @@ export interface PunchItem {
   severity: PunchSeverity;
   trade?: string;
   assigned_to?: string;
-  assignee?: Profile;
-  reported_by: string;
-  reporter?: Profile;
+  reported_by?: string;
   photo_urls: string[];
   resolution_notes?: string;
   resolved_at?: string;
@@ -208,8 +215,7 @@ export interface ChangeOrder {
   amount: number;
   schedule_impact_days: number;
   reason?: string;
-  requested_by: string;
-  requester?: Profile;
+  requested_by?: string;
   approved_by?: string;
   approved_at?: string;
   created_at: string;
