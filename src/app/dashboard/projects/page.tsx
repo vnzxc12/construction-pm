@@ -25,12 +25,12 @@ export default function ProjectsPage() {
   const [creating, setCreating] = useState(false);
 
   // Form State for new project
-  const [newCode, setNewCode] = useState("PRJ-2026-001");
+  const [newCode, setNewCode] = useState("MBS-2026-001");
   const [newName, setNewName] = useState("");
   const [newClient, setNewClient] = useState("");
-  const [newBudget, setNewBudget] = useState("5000000");
+  const [newBudget, setNewBudget] = useState("500000");
   const [newAddress, setNewAddress] = useState("");
-  const [newCity, setNewCity] = useState("Seattle");
+  const [newCity, setNewCity] = useState("Batangas");
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -58,20 +58,33 @@ export default function ProjectsPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    // 1. Ensure profile exists in profiles table to satisfy foreign key
+    if (user) {
+      await supabase.from("profiles").upsert(
+        {
+          id: user.id,
+          email: user.email || "user@test.com",
+          full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Admin",
+          role: "admin",
+        },
+        { onConflict: "id" }
+      );
+    }
+
     const newProjectPayload = {
       code: newCode,
       name: newName,
-      description: "Active construction site.",
-      address: newAddress || "100 Construction Blvd",
-      city: newCity || "Seattle",
-      client_name: newClient || "Enterprise Client",
+      description: "Active renovation and construction project.",
+      address: newAddress || "Site Location",
+      city: newCity || "Metro Manila",
+      client_name: newClient || "Client",
       status: "in_progress" as ProjectStatus,
-      budget: parseFloat(newBudget) || 1000000,
+      budget: parseFloat(newBudget) || 500000,
       spent: 0,
       start_date: new Date().toISOString().split("T")[0],
       target_completion_date: "2027-12-31",
-      cover_image_url: "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80",
-      created_by: user?.id,
+      cover_image_url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&auto=format&fit=crop&q=80",
+      created_by: user?.id || null,
     };
 
     const { data, error } = await supabase
@@ -284,7 +297,7 @@ export default function ProjectsPage() {
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Westside Innovation Center"
+                  placeholder="e.g. Serrano's Dining Renovation"
                   className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -299,7 +312,7 @@ export default function ProjectsPage() {
                     required
                     value={newClient}
                     onChange={(e) => setNewClient(e.target.value)}
-                    placeholder="e.g. City Developers LLC"
+                    placeholder="e.g. Billy Serrano"
                     className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
@@ -327,7 +340,7 @@ export default function ProjectsPage() {
                     type="text"
                     value={newAddress}
                     onChange={(e) => setNewAddress(e.target.value)}
-                    placeholder="Street Address"
+                    placeholder="e.g. Lalayat San Jose"
                     className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
@@ -340,7 +353,7 @@ export default function ProjectsPage() {
                     type="text"
                     value={newCity}
                     onChange={(e) => setNewCity(e.target.value)}
-                    placeholder="e.g. Manila, Taguig, Cebu"
+                    placeholder="e.g. Batangas"
                     className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
