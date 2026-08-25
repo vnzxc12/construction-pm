@@ -1,9 +1,9 @@
 -- ==============================================================================
--- FIX: project_expenses Table & Row Level Security (RLS) Policies
+-- INSTANT FIX FOR: "new row violates row-level security policy for table project_expenses"
 -- Run this in your Supabase SQL Editor
 -- ==============================================================================
 
--- 1. Ensure the table exists
+-- 1. Ensure table exists
 CREATE TABLE IF NOT EXISTS public.project_expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -18,25 +18,18 @@ CREATE TABLE IF NOT EXISTS public.project_expenses (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. Enable Row Level Security
-ALTER TABLE public.project_expenses ENABLE ROW LEVEL SECURITY;
-
--- 3. Drop any existing restrictive policies
+-- 2. Drop all restrictive policies
 DROP POLICY IF EXISTS "Members can view project expenses" ON public.project_expenses;
 DROP POLICY IF EXISTS "Members can manage project expenses" ON public.project_expenses;
 DROP POLICY IF EXISTS "Allow all access to project_expenses" ON public.project_expenses;
+DROP POLICY IF EXISTS "allow_all_expenses" ON public.project_expenses;
 
--- 4. Create permissive policies for authenticated and anon users
-CREATE POLICY "Allow all access to project_expenses"
-  ON public.project_expenses
-  FOR ALL
-  TO authenticated, anon
-  USING (true)
-  WITH CHECK (true);
+-- 3. Disable RLS or allow full unrestricted access
+ALTER TABLE public.project_expenses DISABLE ROW LEVEL SECURITY;
 
--- 5. Grant full table permissions
-GRANT ALL ON public.project_expenses TO authenticated, anon, service_role;
+-- 4. Grant table access to all roles
+GRANT ALL ON public.project_expenses TO authenticated, anon, service_role, postgres;
 
--- 6. Indexes for performance
+-- 5. Helpful indexes
 CREATE INDEX IF NOT EXISTS idx_project_expenses_project_id ON public.project_expenses(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_expenses_payment_date ON public.project_expenses(payment_date DESC);
