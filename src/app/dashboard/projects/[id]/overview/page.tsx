@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   Building2,
   Calendar,
+  DollarSign,
   MapPin,
   Users,
   CheckCircle2,
@@ -15,6 +16,8 @@ import {
   FileText,
   Hammer,
   Loader2,
+  Camera,
+  Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project, Task, DailyLog, Profile } from "@/types/database";
@@ -27,6 +30,8 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
   const [projectLogs, setProjectLogs] = useState<DailyLog[]>([]);
   const [teamMembers, setTeamMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadProjectDetails() {
@@ -50,6 +55,49 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
 
     loadProjectDetails();
   }, [params.id]);
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !project) return;
+    setUploadingCover(true);
+
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split(".").pop();
+      const filePath = `covers/${project.id}_${Date.now()}.${fileExt}`;
+
+      // 1. Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("site-photos")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError.message);
+        alert(`Storage upload error: ${uploadError.message}`);
+        setUploadingCover(false);
+        return;
+      }
+
+      // 2. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("site-photos")
+        .getPublicUrl(filePath);
+
+      // 3. Update Project record in Postgres
+      const { error: updateError } = await supabase
+        .from("projects")
+        .update({ cover_image_url: publicUrl })
+        .eq("id", project.id);
+
+      if (!updateError) {
+        setProject({ ...project, cover_image_url: publicUrl });
+      }
+    } catch (err: any) {
+      alert(`Error updating cover photo: ${err?.message}`);
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -84,8 +132,8 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
   return (
     <div className="space-y-6">
       {/* Site Header Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="h-44 relative bg-slate-900">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group/banner relative">
+        <div className="h-48 relative bg-slate-900">
           <img
             src={project.cover_image_url || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80"}
             alt={project.name}
@@ -93,6 +141,35 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
           
+          {/* Change Cover Photo Button */}
+          <div className="absolute top-4 right-4 z-10">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleCoverUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingCover}
+              className="px-3 py-1.5 bg-slate-950/70 hover:bg-slate-900 text-white border border-slate-700/80 rounded-lg text-xs font-semibold backdrop-blur shadow flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              {uploadingCover ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Uploading...</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Change Cover Photo</span>
+                </>
+              )}
+            </button>
+          </div>
+
           <div className="absolute bottom-4 left-6 right-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
@@ -113,7 +190,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
             <div className="flex items-center gap-2">
               <Link
                 href={`/dashboard/projects/${project.id}/daily-logs`}
-                className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs shadow transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs shadow transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Hammer className="w-4 h-4" />
                 <span>Daily Log</span>
@@ -159,9 +236,8 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         </div>
       </div>
 
-      {/* Main Grid: Left Details & Right Activity */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Progress Card */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -267,25 +343,25 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
             )}
           </div>
 
-          {/* Project Stakeholders */}
+          {/* Leadership Directory */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
             <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-500" />
-              <span>Project Leadership</span>
+              <span>Project Team</span>
             </h3>
 
             <div className="space-y-3">
               {teamMembers.map((member) => (
                 <div key={member.id} className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center">
-                    {member.full_name?.substring(0, 2).toUpperCase() || "US"}
+                    {member.full_name?.substring(0, 2).toUpperCase() || "AD"}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-slate-900 truncate">
                       {member.full_name}
                     </h4>
                     <p className="text-[10px] text-slate-500 capitalize">
-                      {member.role?.replace("_", " ")} &bull; {member.company_name || "Company"}
+                      {member.role?.replace("_", " ")} &bull; {member.company_name || "MBS Design Studio"}
                     </p>
                   </div>
                 </div>
