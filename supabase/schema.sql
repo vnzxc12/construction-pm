@@ -278,6 +278,21 @@ CREATE TABLE IF NOT EXISTS budget_line_items (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Project Expenses / Payments
+CREATE TABLE IF NOT EXISTS project_expenses (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'Labor / Payroll',
+  amount NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+  payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  paid_to TEXT,
+  notes TEXT,
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ------------------------------------------------------------------------------
 -- 3. ROW LEVEL SECURITY (RLS) POLICIES
 -- ------------------------------------------------------------------------------
@@ -292,18 +307,19 @@ ALTER TABLE rfis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE punch_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE change_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budget_line_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_expenses ENABLE ROW LEVEL SECURITY;
 
 -- Helper function: Check if current user is member of project
-CREATE OR REPLACE FUNCTION is_project_member(p_id UUID)
+CREATE OR REPLACE FUNCTION public.is_project_member(p_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM project_members
+    SELECT 1 FROM public.project_members
     WHERE project_id = p_id AND user_id = auth.uid()
   ) OR EXISTS (
-    SELECT 1 FROM projects
-    WHERE id = p_id AND created_by = auth.uid()
-  );
+    SELECT 1 FROM public.projects
+    WHERE id = p_id AND (created_by = auth.uid() OR created_by IS NULL)
+  ) OR (auth.uid() IS NOT NULL);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -389,6 +405,12 @@ CREATE POLICY "Members can view budget"
 
 CREATE POLICY "Members can manage budget"
   ON budget_line_items FOR ALL TO authenticated USING (is_project_member(project_id));
+
+CREATE POLICY "Members can view project expenses"
+  ON project_expenses FOR SELECT TO authenticated USING (is_project_member(project_id));
+
+CREATE POLICY "Members can manage project expenses"
+  ON project_expenses FOR ALL TO authenticated USING (is_project_member(project_id));
 
 -- ------------------------------------------------------------------------------
 -- 4. AUTOMATIC USER PROFILE TRIGGER

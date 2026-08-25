@@ -83,7 +83,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
       payment_date: expDate,
       paid_to: expPaidTo || "Field Contractor",
       notes: expNotes,
-      created_by: user?.id,
+      created_by: user?.id || null,
     };
 
     const { data: insertedExp, error } = await supabase
