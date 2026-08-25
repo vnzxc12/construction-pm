@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   HelpCircle,
   Plus,
@@ -8,22 +8,22 @@ import {
   DollarSign,
   Clock,
   CheckCircle2,
-  FileText,
   AlertCircle,
-  ArrowRight,
-  TrendingUp,
+  Loader2,
 } from "lucide-react";
-import { MOCK_PROJECTS, MOCK_RFIS, MOCK_CHANGE_ORDERS } from "@/lib/mock-data";
-import { RFI, ChangeOrder, RFIStatus } from "@/types/database";
+import { createClient } from "@/lib/supabase/client";
+import { RFI, ChangeOrder, Project, RFIStatus } from "@/types/database";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function RFIsPage({ params }: { params: { id: string } }) {
-  const project = MOCK_PROJECTS.find((p) => p.id === params.id) || MOCK_PROJECTS[0];
-  const [rfis, setRfis] = useState<RFI[]>(MOCK_RFIS);
-  const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>(MOCK_CHANGE_ORDERS);
+  const [project, setProject] = useState<Project | null>(null);
+  const [rfis, setRfis] = useState<RFI[]>([]);
+  const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
   const [activeTab, setActiveTab] = useState<"rfis" | "change_orders">("rfis");
+  const [loading, setLoading] = useState(true);
   const [showRfiModal, setShowRfiModal] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // New RFI Form
   const [subject, setSubject] = useState("");
@@ -33,31 +33,65 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
   const [costEstimate, setCostEstimate] = useState("0");
   const [impactDays, setImpactDays] = useState("0");
 
-  const handleCreateRFI = (e: React.FormEvent) => {
+  const fetchRFIs = async () => {
+    setLoading(true);
+    const supabase = createClient();
+
+    const [projRes, rfisRes, coRes] = await Promise.all([
+      supabase.from("projects").select("*").eq("id", params.id).single(),
+      supabase.from("rfis").select("*").eq("project_id", params.id).order("rfi_number", { ascending: false }),
+      supabase.from("change_orders").select("*").eq("project_id", params.id).order("co_number", { ascending: false }),
+    ]);
+
+    if (projRes.data) setProject(projRes.data);
+    if (rfisRes.data) setRfis(rfisRes.data);
+    if (coRes.data) setChangeOrders(coRes.data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRFIs();
+  }, [params.id]);
+
+  const handleCreateRFI = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject || !question) return;
+    setSaving(true);
 
-    const newRfi: RFI = {
-      id: `rfi-${Date.now()}`,
-      project_id: project.id,
-      rfi_number: rfis.length + 46,
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const newRfiPayload = {
+      project_id: params.id,
+      rfi_number: rfis.length + 1,
       subject,
       question,
       suggested_solution: solution,
-      status: "submitted",
+      status: "submitted" as RFIStatus,
       impact_cost: impactCost,
       cost_estimate: parseFloat(costEstimate) || 0,
       impact_days: parseInt(impactDays) || 0,
-      submitted_by: "user-2",
-      due_date: "2026-09-10",
-      created_at: new Date().toISOString(),
+      submitted_by: user?.id,
+      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     };
 
-    setRfis([newRfi, ...rfis]);
-    setShowRfiModal(false);
-    setSubject("");
-    setQuestion("");
-    setSolution("");
+    const { data, error } = await supabase
+      .from("rfis")
+      .insert(newRfiPayload)
+      .select()
+      .single();
+
+    if (data) {
+      setRfis([data, ...rfis]);
+      setShowRfiModal(false);
+      setSubject("");
+      setQuestion("");
+      setSolution("");
+    } else if (error) {
+      alert(`Error submitting RFI: ${error.message}`);
+    }
+
+    setSaving(false);
   };
 
   return (
@@ -67,21 +101,21 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
-              {project.code}
+              {project?.code || "PRJ"}
             </span>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              RFIs & Change Order Approvals
+              RFIs & Change Orders
             </h1>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Official design clarifications, architect responses, and cost impact governance.
+            Design clarifications and architect inquiries saved in Supabase.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setShowRfiModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-sm shadow-sm transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-sm shadow-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Submit New RFI</span>
@@ -93,7 +127,7 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
         <button
           type="button"
           onClick={() => setActiveTab("rfis")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
             activeTab === "rfis"
               ? "border-amber-500 text-slate-900"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -105,7 +139,7 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
         <button
           type="button"
           onClick={() => setActiveTab("change_orders")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
             activeTab === "change_orders"
               ? "border-amber-500 text-slate-900"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -117,120 +151,91 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* RFIs View */}
-      {activeTab === "rfis" && (
-        <div className="space-y-4">
-          {rfis.map((rfi) => (
-            <div
-              key={rfi.id}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4"
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center text-slate-500 space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+          <span className="text-sm font-medium">Loading RFIs from Database...</span>
+        </div>
+      ) : activeTab === "rfis" ? (
+        rfis.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
+            <HelpCircle className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+            <h3 className="text-base font-bold text-slate-900">No RFIs Submitted Yet</h3>
+            <p className="text-xs text-slate-500 mt-1 mb-6">
+              Need design or engineering clarification? Submit an RFI below.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowRfiModal(true)}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs shadow inline-flex items-center gap-2 cursor-pointer"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs font-bold bg-slate-900 text-white px-2.5 py-1 rounded">
-                    RFI #{rfi.rfi_number}
-                  </span>
-                  <h3 className="font-bold text-slate-900 text-base">
-                    {rfi.subject}
-                  </h3>
+              <Plus className="w-4 h-4" />
+              <span>Submit First RFI</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {rfis.map((rfi) => (
+              <div
+                key={rfi.id}
+                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs font-bold bg-slate-900 text-white px-2.5 py-1 rounded">
+                      RFI #{rfi.rfi_number}
+                    </span>
+                    <h3 className="font-bold text-slate-900 text-base">
+                      {rfi.subject}
+                    </h3>
+                  </div>
+                  <StatusBadge status={rfi.status} />
                 </div>
-                <StatusBadge status={rfi.status} />
-              </div>
 
-              {/* Question & Solution */}
-              <div className="space-y-3 text-xs">
-                <div>
-                  <span className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Question / Inquiry:
-                  </span>
-                  <p className="text-slate-800 bg-slate-50 p-3.5 rounded-xl border border-slate-200/70 leading-relaxed text-sm">
-                    {rfi.question}
-                  </p>
-                </div>
-
-                {rfi.suggested_solution && (
+                <div className="space-y-3 text-xs">
                   <div>
                     <span className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                      Suggested Field Solution:
+                      Inquiry / Discrepancy:
                     </span>
-                    <p className="text-slate-600 bg-amber-50/50 p-3 rounded-lg border border-amber-200/50">
-                      {rfi.suggested_solution}
+                    <p className="text-slate-800 bg-slate-50 p-3.5 rounded-xl border border-slate-200/70 leading-relaxed text-sm">
+                      {rfi.question}
                     </p>
                   </div>
-                )}
 
-                {/* Official Response */}
-                {rfi.official_answer && (
-                  <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950">
-                    <div className="flex items-center gap-1.5 font-bold text-emerald-900 mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>Official Architect / Structural Response:</span>
+                  {rfi.suggested_solution && (
+                    <div>
+                      <span className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        Suggested Field Solution:
+                      </span>
+                      <p className="text-slate-600 bg-amber-50/50 p-3 rounded-lg border border-amber-200/50">
+                        {rfi.suggested_solution}
+                      </p>
                     </div>
-                    <p className="text-xs leading-relaxed text-slate-800 font-medium">
-                      {rfi.official_answer}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Impact Footer */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 text-xs text-slate-500">
-                <div className="flex items-center gap-4">
-                  {rfi.impact_cost ? (
-                    <span className="font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-                      Cost Impact: {formatCurrency(rfi.cost_estimate)} (+{rfi.impact_days} days)
-                    </span>
-                  ) : (
-                    <span className="text-slate-500 font-medium">No Schedule/Cost Impact</span>
                   )}
-                  <span>Due: {formatDate(rfi.due_date)}</span>
-                </div>
-                <span className="text-[11px] text-slate-400 font-mono">Submitted {formatDate(rfi.created_at)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* Change Orders View */}
-      {activeTab === "change_orders" && (
-        <div className="space-y-4">
-          {changeOrders.map((co) => (
-            <div
-              key={co.id}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs font-bold bg-amber-500 text-slate-950 px-2.5 py-1 rounded shadow-sm">
-                    CO #{co.co_number}
-                  </span>
-                  <h3 className="font-bold text-slate-900 text-base">
-                    {co.title}
-                  </h3>
-                </div>
-                <StatusBadge status={co.status} />
-              </div>
-
-              <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                {co.description}
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Financial Amount</span>
-                  <span className="font-bold text-slate-900 text-sm">{formatCurrency(co.amount)}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Schedule Impact</span>
-                  <span className="font-bold text-slate-900 text-sm">+{co.schedule_impact_days} Calendar Days</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Reason</span>
-                  <span className="font-semibold text-slate-700 text-xs">{co.reason}</span>
+                  {rfi.official_answer && (
+                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950">
+                      <div className="flex items-center gap-1.5 font-bold text-emerald-900 mb-1">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Official Engineer Response:</span>
+                      </div>
+                      <p className="text-xs leading-relaxed text-slate-800 font-medium">
+                        {rfi.official_answer}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )
+      ) : (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
+          <DollarSign className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+          <h3 className="text-base font-bold text-slate-900">No Change Orders on File</h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Approved scope modifications will appear here.
+          </p>
         </div>
       )}
 
@@ -240,7 +245,7 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200">
             <h2 className="text-xl font-bold text-slate-900">Submit Official RFI</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Field clarification for {project.name}
+              Engineering clarification for {project?.name || "Project"}
             </p>
 
             <form onSubmit={handleCreateRFI} className="space-y-4 mt-5">
@@ -253,7 +258,7 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
                   required
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. Clash between Plumbing Line and Structural Beam B-18"
+                  placeholder="e.g. Clash between Plumbing Line and Structural Beam"
                   className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -267,73 +272,38 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
                   rows={4}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Clearly describe the discrepancy, sheet numbers, and specific question for the engineering team..."
+                  placeholder="Describe discrepancy and specific question for engineer..."
                   className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                  Proposed Contractor Solution
+                  Proposed Solution (Optional)
                 </label>
                 <input
                   type="text"
                   value={solution}
                   onChange={(e) => setSolution(e.target.value)}
-                  placeholder="Proposed field solution or recommendation..."
+                  placeholder="Field recommendation..."
                   className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <input
-                  type="checkbox"
-                  id="impactCheck"
-                  checked={impactCost}
-                  onChange={(e) => setImpactCost(e.target.checked)}
-                  className="w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500"
-                />
-                <label htmlFor="impactCheck" className="text-xs font-semibold text-slate-700 cursor-pointer">
-                  Potential Cost / Schedule Impact Expected
-                </label>
-              </div>
-
-              {impactCost && (
-                <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
-                  <div>
-                    <label className="block text-xs font-semibold text-amber-900 uppercase">Estimated Cost ($)</label>
-                    <input
-                      type="number"
-                      value={costEstimate}
-                      onChange={(e) => setCostEstimate(e.target.value)}
-                      className="mt-1 w-full px-3 py-1.5 border border-amber-300 rounded-lg text-sm bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-amber-900 uppercase">Schedule Delay (Days)</label>
-                    <input
-                      type="number"
-                      value={impactDays}
-                      onChange={(e) => setImpactDays(e.target.value)}
-                      className="mt-1 w-full px-3 py-1.5 border border-amber-300 rounded-lg text-sm bg-white"
-                    />
-                  </div>
-                </div>
-              )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowRfiModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm"
+                  disabled={saving}
+                  className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm cursor-pointer flex items-center gap-2"
                 >
-                  Submit RFI
+                  {saving ? "Saving to Supabase..." : "Submit RFI"}
                 </button>
               </div>
             </form>

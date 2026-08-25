@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,13 +17,32 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { Project } from "@/types/database";
 
-interface SidebarProps {
-  currentProjectId?: string;
-}
-
-export function Sidebar({ currentProjectId = "prj-1" }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    async function getActiveProject() {
+      const supabase = createClient();
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (projects && projects.length > 0) {
+        // Find project from URL if inside /projects/[id]
+        const matched = projects.find((p) => pathname.includes(p.id));
+        setActiveProject(matched || projects[0]);
+      } else {
+        setActiveProject(null);
+      }
+    }
+
+    getActiveProject();
+  }, [pathname]);
 
   const globalNav = [
     {
@@ -33,62 +52,61 @@ export function Sidebar({ currentProjectId = "prj-1" }: SidebarProps) {
       active: pathname === "/dashboard",
     },
     {
-      name: "All Projects",
+      name: "Projects Directory",
       href: "/dashboard/projects",
       icon: Building2,
       active: pathname === "/dashboard/projects",
     },
   ];
 
-  const projectNav = [
-    {
-      name: "Site Overview",
-      href: `/dashboard/projects/${currentProjectId}/overview`,
-      icon: FolderOpen,
-      active: pathname.includes(`/projects/${currentProjectId}/overview`),
-    },
-    {
-      name: "Daily Field Logs",
-      href: `/dashboard/projects/${currentProjectId}/daily-logs`,
-      icon: CalendarCheck2,
-      active: pathname.includes(`/projects/${currentProjectId}/daily-logs`),
-      badge: "Today",
-    },
-    {
-      name: "Tasks & Schedule",
-      href: `/dashboard/projects/${currentProjectId}/tasks`,
-      icon: ListTodo,
-      active: pathname.includes(`/projects/${currentProjectId}/tasks`),
-    },
-    {
-      name: "Drawings & Specs",
-      href: `/dashboard/projects/${currentProjectId}/drawings`,
-      icon: FileSpreadsheet,
-      active: pathname.includes(`/projects/${currentProjectId}/drawings`),
-    },
-    {
-      name: "Punch List",
-      href: `/dashboard/projects/${currentProjectId}/punch-list`,
-      icon: AlertCircle,
-      active: pathname.includes(`/projects/${currentProjectId}/punch-list`),
-      badge: "2 Open",
-      badgeColor: "bg-red-100 text-red-700",
-    },
-    {
-      name: "RFIs & Changes",
-      href: `/dashboard/projects/${currentProjectId}/rfis`,
-      icon: HelpCircle,
-      active: pathname.includes(`/projects/${currentProjectId}/rfis`),
-      badge: "1 Pending",
-      badgeColor: "bg-amber-100 text-amber-800",
-    },
-    {
-      name: "Budget & Financials",
-      href: `/dashboard/projects/${currentProjectId}/budget`,
-      icon: DollarSign,
-      active: pathname.includes(`/projects/${currentProjectId}/budget`),
-    },
-  ];
+  const projectId = activeProject?.id;
+
+  const projectNav = projectId
+    ? [
+        {
+          name: "Site Overview",
+          href: `/dashboard/projects/${projectId}/overview`,
+          icon: FolderOpen,
+          active: pathname.includes(`/projects/${projectId}/overview`),
+        },
+        {
+          name: "Daily Field Logs",
+          href: `/dashboard/projects/${projectId}/daily-logs`,
+          icon: CalendarCheck2,
+          active: pathname.includes(`/projects/${projectId}/daily-logs`),
+        },
+        {
+          name: "Tasks & Schedule",
+          href: `/dashboard/projects/${projectId}/tasks`,
+          icon: ListTodo,
+          active: pathname.includes(`/projects/${projectId}/tasks`),
+        },
+        {
+          name: "Drawings & Specs",
+          href: `/dashboard/projects/${projectId}/drawings`,
+          icon: FileSpreadsheet,
+          active: pathname.includes(`/projects/${projectId}/drawings`),
+        },
+        {
+          name: "Punch List",
+          href: `/dashboard/projects/${projectId}/punch-list`,
+          icon: AlertCircle,
+          active: pathname.includes(`/projects/${projectId}/punch-list`),
+        },
+        {
+          name: "RFIs & Changes",
+          href: `/dashboard/projects/${projectId}/rfis`,
+          icon: HelpCircle,
+          active: pathname.includes(`/projects/${projectId}/rfis`),
+        },
+        {
+          name: "Budget & Financials",
+          href: `/dashboard/projects/${projectId}/budget`,
+          icon: DollarSign,
+          active: pathname.includes(`/projects/${projectId}/budget`),
+        },
+      ]
+    : [];
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 h-screen sticky top-0 border-r border-slate-800 z-30">
@@ -130,41 +148,46 @@ export function Sidebar({ currentProjectId = "prj-1" }: SidebarProps) {
         </div>
 
         {/* Active Project Navigation */}
-        <div>
-          <div className="px-3 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            <span>Active Project</span>
-            <span className="text-[10px] text-amber-400 font-mono">PRJ-001</span>
+        {activeProject ? (
+          <div>
+            <div className="px-3 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <span>Active Site</span>
+              <span className="text-[10px] text-amber-400 font-mono">{activeProject.code}</span>
+            </div>
+            <nav className="space-y-1">
+              {projectNav.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    item.active
+                      ? "bg-slate-800 text-amber-400 font-semibold border-l-4 border-amber-500 pl-2"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-4 h-4 flex-shrink-0" />
+                    <span>{item.name}</span>
+                  </div>
+                </Link>
+              ))}
+            </nav>
           </div>
-          <nav className="space-y-1">
-            {projectNav.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                  item.active
-                    ? "bg-slate-800 text-amber-400 font-semibold border-l-4 border-amber-500 pl-2"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{item.name}</span>
-                </div>
-                {item.badge && (
-                  <span
-                    className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded font-bold uppercase",
-                      item.badgeColor || "bg-amber-400/20 text-amber-300"
-                    )}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        ) : (
+          <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-800 text-xs text-slate-400">
+            <span className="font-bold text-slate-300 block mb-1">No Active Projects</span>
+            <p className="text-[11px] leading-relaxed">
+              Create a project to unlock site daily logs, blueprints, and task boards.
+            </p>
+            <Link
+              href="/dashboard/projects"
+              className="mt-2 inline-block text-amber-400 hover:underline font-semibold"
+            >
+              + Create Project
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Footer / Settings */}

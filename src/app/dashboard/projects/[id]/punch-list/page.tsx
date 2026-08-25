@@ -1,29 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertCircle,
   Plus,
   Search,
-  Filter,
   MapPin,
-  Camera,
   CheckCircle2,
   Clock,
-  ShieldAlert,
-  ArrowRight,
+  Loader2,
 } from "lucide-react";
-import { MOCK_PROJECTS, MOCK_PUNCH_ITEMS } from "@/lib/mock-data";
-import { PunchItem, PunchStatus, PunchSeverity } from "@/types/database";
+import { createClient } from "@/lib/supabase/client";
+import { PunchItem, PunchStatus, PunchSeverity, Project } from "@/types/database";
 import { PriorityBadge, StatusBadge } from "@/components/ui/status-badge";
 import { formatDate } from "@/lib/utils";
 
 export default function PunchListPage({ params }: { params: { id: string } }) {
-  const project = MOCK_PROJECTS.find((p) => p.id === params.id) || MOCK_PROJECTS[0];
-  const [punchItems, setPunchItems] = useState<PunchItem[]>(MOCK_PUNCH_ITEMS);
+  const [project, setProject] = useState<Project | null>(null);
+  const [punchItems, setPunchItems] = useState<PunchItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // New Punch Item Form
   const [title, setTitle] = useState("");
@@ -32,16 +31,25 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
   const [trade, setTrade] = useState("Drywall / Finishes");
   const [severity, setSeverity] = useState<PunchSeverity>("minor");
 
-  const filteredItems = punchItems.filter((item) => {
-    const matchesStatus = filterStatus === "all" || item.status === filterStatus;
-    const matchesSearch =
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.location.toLowerCase().includes(search.toLowerCase()) ||
-      (item.trade && item.trade.toLowerCase().includes(search.toLowerCase()));
-    return matchesStatus && matchesSearch;
-  });
+  const fetchPunchItems = async () => {
+    setLoading(true);
+    const supabase = createClient();
 
-  const handleResolveItem = (id: string) => {
+    const [projRes, punchRes] = await Promise.all([
+      supabase.from("projects").select("*").eq("id", params.id).single(),
+      supabase.from("punch_items").select("*").eq("project_id", params.id).order("item_number", { ascending: false }),
+    ]);
+
+    if (projRes.data) setProject(projRes.data);
+    if (punchRes.data) setPunchItems(punchRes.data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPunchItems();
+  }, [params.id]);
+
+  const handleResolveItem = async (id: string) => {
     setPunchItems(
       punchItems.map((item) =>
         item.id === id
@@ -49,40 +57,71 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
               ...item,
               status: "approved" as PunchStatus,
               resolved_at: new Date().toISOString(),
-              resolution_notes: "Field verified by Superintendent. Corrective work accepted.",
+              resolution_notes: "Field verified and signed off.",
             }
           : item
       )
     );
+
+    const supabase = createClient();
+    await supabase
+      .from("punch_items")
+      .update({
+        status: "approved",
+        resolved_at: new Date().toISOString(),
+        resolution_notes: "Field verified and signed off.",
+      })
+      .eq("id", id);
   };
 
-  const handleCreatePunch = (e: React.FormEvent) => {
+  const handleCreatePunch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return;
+    setSaving(true);
 
-    const newItem: PunchItem = {
-      id: `punch-${Date.now()}`,
-      project_id: project.id,
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const newPunchPayload = {
+      project_id: params.id,
       item_number: punchItems.length + 101,
       title,
       description,
       location: location || "General Site Area",
-      status: "open",
+      status: "open" as PunchStatus,
       severity,
       trade,
-      reported_by: "user-2",
-      photo_urls: [
-        "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80",
-      ],
-      created_at: new Date().toISOString(),
+      reported_by: user?.id,
+      photo_urls: [],
     };
 
-    setPunchItems([newItem, ...punchItems]);
-    setShowModal(false);
-    setTitle("");
-    setLocation("");
-    setDescription("");
+    const { data, error } = await supabase
+      .from("punch_items")
+      .insert(newPunchPayload)
+      .select()
+      .single();
+
+    if (data) {
+      setPunchItems([data, ...punchItems]);
+      setShowModal(false);
+      setTitle("");
+      setLocation("");
+      setDescription("");
+    } else if (error) {
+      alert(`Error saving punch item: ${error.message}`);
+    }
+
+    setSaving(false);
   };
+
+  const filteredItems = punchItems.filter((item) => {
+    const matchesStatus = filterStatus === "all" || item.status === filterStatus;
+    const matchesSearch =
+      item.title?.toLowerCase().includes(search.toLowerCase()) ||
+      item.location?.toLowerCase().includes(search.toLowerCase()) ||
+      (item.trade && item.trade.toLowerCase().includes(search.toLowerCase()));
+    return matchesStatus && matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -91,21 +130,21 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
-              {project.code}
+              {project?.code || "PRJ"}
             </span>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               Punch List & Quality Inspections
             </h1>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Pinpoint site deficiencies, attach photos, assign trades, and record sign-offs.
+            Pinpoint site deficiencies and record inspection sign-offs in Supabase.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-sm shadow-sm transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-sm shadow-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Log Punch Item</span>
@@ -126,12 +165,12 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {["all", "open", "ready_for_inspection", "approved"].map((st) => (
+          {["all", "open", "approved"].map((st) => (
             <button
               key={st}
               type="button"
               onClick={() => setFilterStatus(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors cursor-pointer ${
                 filterStatus === st
                   ? "bg-slate-900 text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -144,90 +183,94 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Punch Items List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between space-y-4"
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center text-slate-500 space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+          <span className="text-sm font-medium">Loading Punch List...</span>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
+          <AlertCircle className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+          <h3 className="text-base font-bold text-slate-900">Zero Open Punch Items</h3>
+          <p className="text-xs text-slate-500 mt-1 mb-6">
+            Site quality inspection is clean! Click below if you need to log an issue.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs shadow inline-flex items-center gap-2 cursor-pointer"
           >
-            <div>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
-                    #{item.item_number}
-                  </span>
-                  <PriorityBadge priority={item.severity} />
-                  <span className="text-xs font-medium text-slate-500">{item.trade}</span>
-                </div>
-                <StatusBadge status={item.status} />
-              </div>
-
-              <h3 className="font-bold text-slate-900 text-base mt-2.5">
-                {item.title}
-              </h3>
-
-              <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium mt-1">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>{item.location}</span>
-              </div>
-
-              {item.description && (
-                <p className="text-xs text-slate-600 mt-2 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed">
-                  {item.description}
-                </p>
-              )}
-
-              {/* Photo Previews */}
-              {item.photo_urls && item.photo_urls.length > 0 && (
-                <div className="mt-3">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-                    Field Photos ({item.photo_urls.length})
-                  </span>
-                  <div className="flex gap-2">
-                    {item.photo_urls.map((url, idx) => (
-                      <img
-                        key={idx}
-                        src={url}
-                        alt="Defect"
-                        className="w-20 h-16 rounded-lg object-cover border border-slate-200 hover:opacity-90 cursor-pointer"
-                      />
-                    ))}
+            <Plus className="w-4 h-4" />
+            <span>Log First Punch Item</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filteredItems.map((item) => (
+            <div
+              key={item.id}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between space-y-4"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
+                      #{item.item_number}
+                    </span>
+                    <PriorityBadge priority={item.severity} />
+                    <span className="text-xs font-medium text-slate-500">{item.trade}</span>
                   </div>
+                  <StatusBadge status={item.status} />
                 </div>
-              )}
 
-              {item.resolution_notes && (
-                <div className="mt-3 p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-800">
-                  <span className="font-bold block">Resolution Verified:</span>
-                  <span>{item.resolution_notes}</span>
+                <h3 className="font-bold text-slate-900 text-base mt-2.5">
+                  {item.title}
+                </h3>
+
+                <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium mt-1">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>{item.location}</span>
                 </div>
-              )}
-            </div>
 
-            {/* Footer Action */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-mono">
-                Reported {formatDate(item.created_at)}
-              </span>
+                {item.description && (
+                  <p className="text-xs text-slate-600 mt-2 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
 
-              {item.status !== "approved" ? (
-                <button
-                  type="button"
-                  onClick={() => handleResolveItem(item.id)}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-colors"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Verify & Sign Off</span>
-                </button>
-              ) : (
-                <span className="text-emerald-600 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> Signed Off
+                {item.resolution_notes && (
+                  <div className="mt-3 p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-800">
+                    <span className="font-bold block">Resolution:</span>
+                    <span>{item.resolution_notes}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-mono">
+                  {formatDate(item.created_at)}
                 </span>
-              )}
+
+                {item.status !== "approved" ? (
+                  <button
+                    type="button"
+                    onClick={() => handleResolveItem(item.id)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Verify & Sign Off</span>
+                  </button>
+                ) : (
+                  <span className="text-emerald-600 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" /> Signed Off
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Create Punch Item Modal */}
       {showModal && (
@@ -235,7 +278,7 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
             <h2 className="text-xl font-bold text-slate-900">Record Punch Item</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Add defect or inspection item on {project.name}
+              Add defect or inspection item for {project?.name || "Project"}
             </p>
 
             <form onSubmit={handleCreatePunch} className="space-y-4 mt-5">
@@ -305,7 +348,7 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Specific instructions for subcontractor remediation..."
+                  placeholder="Specific instructions for remediation..."
                   className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -314,15 +357,16 @@ export default function PunchListPage({ params }: { params: { id: string } }) {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm"
+                  disabled={saving}
+                  className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm cursor-pointer flex items-center gap-2"
                 >
-                  Save Punch Item
+                  {saving ? "Saving to Supabase..." : "Save Punch Item"}
                 </button>
               </div>
             </form>

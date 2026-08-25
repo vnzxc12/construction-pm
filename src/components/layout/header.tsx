@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Bell, Search, PlusCircle, User, LogOut, ShieldCheck } from "lucide-react";
-import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { useRouter, usePathname } from "next/navigation";
+import { Bell, Search, PlusCircle, LogOut, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Project } from "@/types/database";
 
 interface UserProfile {
   name: string;
@@ -16,66 +16,73 @@ interface UserProfile {
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [profile, setProfile] = useState<UserProfile>({
-    name: "Admin User",
-    email: "admin@test.com",
+    name: "Loading...",
+    email: "",
     role: "admin",
   });
-  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
   useEffect(() => {
-    async function loadUser() {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+    async function loadData() {
+      const supabase = createClient();
 
-        if (user) {
-          // Fetch user profile from database
-          const { data: dbProfile } = await supabase
-            .from("profiles")
-            .select("full_name, email, role, avatar_url")
-            .eq("id", user.id)
-            .single();
+      // 1. Fetch Auth User & Profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: dbProfile } = await supabase
+          .from("profiles")
+          .select("full_name, email, role, avatar_url")
+          .eq("id", user.id)
+          .single();
 
-          if (dbProfile) {
-            setProfile({
-              name: dbProfile.full_name || user.email?.split("@")[0] || "User",
-              email: dbProfile.email || user.email || "",
-              role: dbProfile.role || "admin",
-              avatarUrl: dbProfile.avatar_url,
-            });
-          } else {
-            // Fallback to user auth metadata or email
-            const metaName = user.user_metadata?.full_name;
-            setProfile({
-              name: metaName || user.email?.split("@")[0] || "Admin",
-              email: user.email || "",
-              role: (user.user_metadata?.role as string) || "admin",
-            });
-          }
+        if (dbProfile) {
+          setProfile({
+            name: dbProfile.full_name || user.email?.split("@")[0] || "User",
+            email: dbProfile.email || user.email || "",
+            role: dbProfile.role || "admin",
+            avatarUrl: dbProfile.avatar_url,
+          });
+        } else {
+          setProfile({
+            name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+            email: user.email || "",
+            role: (user.user_metadata?.role as string) || "admin",
+          });
         }
-      } catch (err) {
-        console.warn("Could not fetch user profile:", err);
-      } finally {
-        setLoading(false);
+      }
+
+      // 2. Fetch Projects from Supabase
+      const { data: projectList } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (projectList && projectList.length > 0) {
+        setProjects(projectList);
+        // Match current route project ID or default to first
+        const matched = projectList.find(p => pathname.includes(p.id));
+        setSelectedProjectId(matched ? matched.id : projectList[0].id);
       }
     }
 
-    loadUser();
-  }, []);
+    loadData();
+  }, [pathname]);
 
   const handleSignOut = async () => {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
       router.push("/login");
-    } catch (err) {
+    } catch {
       router.push("/login");
     }
   };
 
   const getInitials = (name: string) => {
-    if (!name) return "U";
+    if (!name || name === "Loading...") return "U";
     const parts = name.trim().split(" ");
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
@@ -93,16 +100,26 @@ export function Header() {
             id="project-selector"
             aria-label="Select active project"
             className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-3 pr-8 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-pointer"
-            defaultValue="prj-1"
+            value={selectedProjectId}
             onChange={(e) => {
-              router.push(`/dashboard/projects/${e.target.value}/overview`);
+              const val = e.target.value;
+              setSelectedProjectId(val);
+              if (val) {
+                router.push(`/dashboard/projects/${val}/overview`);
+              } else {
+                router.push(`/dashboard/projects`);
+              }
             }}
           >
-            {MOCK_PROJECTS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.code} — {p.name.length > 30 ? p.name.substring(0, 30) + '...' : p.name}
-              </option>
-            ))}
+            {projects.length === 0 ? (
+              <option value="">No projects in database</option>
+            ) : (
+              projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.code} — {p.name.length > 25 ? p.name.substring(0, 25) + "..." : p.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
 
@@ -110,7 +127,7 @@ export function Header() {
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search tasks, drawings, RFIs, specs..."
+            placeholder="Search active site records..."
             className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
           />
         </div>
@@ -118,31 +135,22 @@ export function Header() {
 
       {/* Actions & User Info */}
       <div className="flex items-center gap-3">
-        <Link
-          href="/dashboard/projects/prj-1/daily-logs"
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-lg text-xs shadow-sm transition-colors"
-        >
-          <PlusCircle className="w-3.5 h-3.5" />
-          <span>New Daily Log</span>
-        </Link>
+        {selectedProjectId && (
+          <Link
+            href={`/dashboard/projects/${selectedProjectId}/daily-logs`}
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-lg text-xs shadow-sm transition-colors"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>New Daily Log</span>
+          </Link>
+        )}
 
-        {/* Notifications */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors relative"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-white"></span>
-        </button>
-
-        {/* User Card */}
         <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
           {profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}
               alt={profile.name}
-              className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
+              className="w-8 h-8 rounded-full object-cover ring-1 border"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shadow-sm">

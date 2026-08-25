@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -15,17 +15,72 @@ import {
   ShieldCheck,
   FileText,
   Hammer,
+  Loader2,
 } from "lucide-react";
-import { MOCK_PROJECTS, MOCK_TASKS, MOCK_DAILY_LOGS, MOCK_PROFILES } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/client";
+import { Project, Task, DailyLog, Profile } from "@/types/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { StatusBadge, PriorityBadge } from "@/components/ui/status-badge";
 
 export default function ProjectOverviewPage({ params }: { params: { id: string } }) {
-  const project = MOCK_PROJECTS.find((p) => p.id === params.id) || MOCK_PROJECTS[0];
-  const projectTasks = MOCK_TASKS.filter((t) => t.project_id === project.id);
-  const projectLogs = MOCK_DAILY_LOGS.filter((l) => l.project_id === project.id);
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectTasks, setProjectTasks] = useState<Task[]>([]);
+  const [projectLogs, setProjectLogs] = useState<DailyLog[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProjectDetails() {
+      setLoading(true);
+      const supabase = createClient();
+
+      const [projRes, tasksRes, logsRes, profilesRes] = await Promise.all([
+        supabase.from("projects").select("*").eq("id", params.id).single(),
+        supabase.from("tasks").select("*").eq("project_id", params.id).order("due_date", { ascending: true }).limit(5),
+        supabase.from("daily_logs").select("*").eq("project_id", params.id).order("log_date", { ascending: false }).limit(1),
+        supabase.from("profiles").select("*").limit(4),
+      ]);
+
+      if (projRes.data) setProject(projRes.data);
+      if (tasksRes.data) setProjectTasks(tasksRes.data);
+      if (logsRes.data) setProjectLogs(logsRes.data);
+      if (profilesRes.data) setTeamMembers(profilesRes.data);
+
+      setLoading(false);
+    }
+
+    loadProjectDetails();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <div className="py-24 flex flex-col items-center justify-center text-slate-500 space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <span className="text-sm font-medium">Loading Job Site Details from Supabase...</span>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto">
+        <Building2 className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+        <h2 className="text-lg font-bold text-slate-900">Project Not Found</h2>
+        <p className="text-xs text-slate-500 mt-1 mb-4">
+          This project could not be found in your database.
+        </p>
+        <Link
+          href="/dashboard/projects"
+          className="px-4 py-2 bg-slate-900 text-white font-semibold rounded-lg text-xs"
+        >
+          &larr; Back to Projects Directory
+        </Link>
+      </div>
+    );
+  }
+
   const completedTasks = projectTasks.filter((t) => t.status === "done").length;
-  const progressPercent = projectTasks.length > 0 ? Math.round((completedTasks / projectTasks.length) * 100) : 65;
+  const progressPercent = projectTasks.length > 0 ? Math.round((completedTasks / projectTasks.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -33,7 +88,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="h-44 relative bg-slate-900">
           <img
-            src={project.cover_image_url}
+            src={project.cover_image_url || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80"}
             alt={project.name}
             className="w-full h-full object-cover opacity-60"
           />
@@ -52,7 +107,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
               </h1>
               <div className="flex items-center gap-2 text-slate-300 text-xs mt-1">
                 <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                <span>{project.address}, {project.city}, {project.state} {project.zip_code}</span>
+                <span>{project.address}, {project.city}</span>
               </div>
             </div>
 
@@ -96,10 +151,10 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           </div>
           <div className="px-4 py-2">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-              Active Headcount
+              Client
             </span>
-            <span className="text-lg font-bold text-emerald-600 mt-0.5 block">
-              70 Workers
+            <span className="text-base font-bold text-slate-800 mt-0.5 block truncate">
+              {project.client_name}
             </span>
           </div>
         </div>
@@ -107,7 +162,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
 
       {/* Main Grid: Left Details & Right Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column (2 Cols) */}
+        {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Progress Card */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -122,7 +177,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
               />
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              {project.description}
+              {project.description || "Active construction site operations."}
             </p>
           </div>
 
@@ -139,32 +194,35 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
               </Link>
             </div>
 
-            <div className="space-y-3">
-              {projectTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between gap-3"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <PriorityBadge priority={task.priority} />
-                      <span className="text-xs font-semibold text-slate-700">
-                        {task.trade_category}
-                      </span>
+            {projectTasks.length === 0 ? (
+              <p className="text-xs text-slate-400 py-6 text-center">No tasks recorded for this site yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {projectTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <PriorityBadge priority={task.priority} />
+                        <span className="text-xs font-semibold text-slate-700">
+                          {task.trade_category || "General"}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 mt-1">
+                        {task.title}
+                      </h4>
                     </div>
-                    <h4 className="text-xs font-bold text-slate-900 mt-1">
-                      {task.title}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{task.description}</p>
+                    <StatusBadge status={task.status} />
                   </div>
-                  <StatusBadge status={task.status} />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column (1 Col) - Field Log & Team */}
+        {/* Right Column */}
         <div className="space-y-6">
           {/* Latest Daily Field Report */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -173,17 +231,13 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
                 <FileText className="w-4 h-4 text-amber-500" />
                 <span>Latest Daily Field Log</span>
               </h3>
-              <span className="text-xs text-slate-500 font-semibold font-mono">
-                {projectLogs[0]?.log_date || "Today"}
-              </span>
             </div>
 
-            {projectLogs[0] && (
+            {projectLogs.length > 0 ? (
               <div className="space-y-3 text-xs">
                 <div className="bg-amber-50/60 p-2.5 rounded-lg border border-amber-200/50">
                   <span className="font-bold text-amber-900 block mb-1">Weather & Site Conditions</span>
-                  <p className="text-amber-800">{projectLogs[0].weather_condition} • High {projectLogs[0].temp_high}°F</p>
-                  <p className="text-[11px] text-slate-600 mt-1">{projectLogs[0].site_conditions}</p>
+                  <p className="text-amber-800">{projectLogs[0].weather_condition}</p>
                 </div>
 
                 <div>
@@ -201,10 +255,20 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
+            ) : (
+              <div className="text-center py-6 text-xs text-slate-400">
+                <p>No daily reports logged yet.</p>
+                <Link
+                  href={`/dashboard/projects/${project.id}/daily-logs`}
+                  className="text-amber-600 font-semibold mt-2 inline-block hover:underline"
+                >
+                  + Add First Daily Log
+                </Link>
+              </div>
             )}
           </div>
 
-          {/* Project Stakeholders / Team */}
+          {/* Project Stakeholders */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
             <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-500" />
@@ -212,19 +276,17 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
             </h3>
 
             <div className="space-y-3">
-              {MOCK_PROFILES.map((member) => (
+              {teamMembers.map((member) => (
                 <div key={member.id} className="flex items-center gap-3">
-                  <img
-                    src={member.avatar_url}
-                    alt={member.full_name}
-                    className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                  />
+                  <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center">
+                    {member.full_name?.substring(0, 2).toUpperCase() || "US"}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-slate-900 truncate">
                       {member.full_name}
                     </h4>
                     <p className="text-[10px] text-slate-500 capitalize">
-                      {member.role.replace("_", " ")} &bull; {member.company_name}
+                      {member.role?.replace("_", " ")} &bull; {member.company_name || "Company"}
                     </p>
                   </div>
                 </div>
