@@ -1,14 +1,87 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Search, PlusCircle, User, LogOut, ShieldCheck } from "lucide-react";
-import { MOCK_PROJECTS, MOCK_PROFILES } from "@/lib/mock-data";
+import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/client";
+
+interface UserProfile {
+  name: string;
+  email: string;
+  role: string;
+  avatarUrl?: string;
+}
 
 export function Header() {
   const router = useRouter();
-  const currentProfile = MOCK_PROFILES[0]; // Sarah Connor (PM)
+  const [profile, setProfile] = useState<UserProfile>({
+    name: "Admin User",
+    email: "admin@test.com",
+    role: "admin",
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // Fetch user profile from database
+          const { data: dbProfile } = await supabase
+            .from("profiles")
+            .select("full_name, email, role, avatar_url")
+            .eq("id", user.id)
+            .single();
+
+          if (dbProfile) {
+            setProfile({
+              name: dbProfile.full_name || user.email?.split("@")[0] || "User",
+              email: dbProfile.email || user.email || "",
+              role: dbProfile.role || "admin",
+              avatarUrl: dbProfile.avatar_url,
+            });
+          } else {
+            // Fallback to user auth metadata or email
+            const metaName = user.user_metadata?.full_name;
+            setProfile({
+              name: metaName || user.email?.split("@")[0] || "Admin",
+              email: user.email || "",
+              role: (user.user_metadata?.role as string) || "admin",
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch user profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push("/login");
+    } catch (err) {
+      router.push("/login");
+    }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm">
@@ -65,27 +138,34 @@ export function Header() {
 
         {/* User Card */}
         <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-          <img
-            src={currentProfile.avatar_url}
-            alt={currentProfile.full_name}
-            className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
-          />
+          {profile.avatarUrl ? (
+            <img
+              src={profile.avatarUrl}
+              alt={profile.name}
+              className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shadow-sm">
+              {getInitials(profile.name)}
+            </div>
+          )}
           <div className="hidden lg:block text-left">
             <span className="block text-xs font-semibold text-slate-900 leading-tight">
-              {currentProfile.full_name}
+              {profile.name}
             </span>
             <span className="block text-[10px] text-slate-500 capitalize">
-              {currentProfile.role.replace("_", " ")}
+              {profile.role.replace("_", " ")}
             </span>
           </div>
-          <Link
-            href="/login"
+          <button
+            type="button"
+            onClick={handleSignOut}
             aria-label="Sign out"
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors ml-1"
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors ml-1 cursor-pointer"
             title="Sign out"
           >
             <LogOut className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
       </div>
     </header>

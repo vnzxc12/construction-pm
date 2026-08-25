@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("sarah.connor@apexconstruction.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,24 +18,30 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      console.warn("Supabase Auth error or running in Demo mode:", authError.message);
-      // If live auth fails (e.g. placeholder keys), gracefully enter demo mode
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
+
       router.push("/dashboard");
-    } else {
-      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err?.message || "Failed to sign in. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const setDemoRole = (demoEmail: string) => {
     setEmail(demoEmail);
+    setPassword("password123");
   };
 
   return (
@@ -94,7 +100,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg shadow-sm text-sm font-bold text-slate-950 bg-amber-500 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg shadow-sm text-sm font-bold text-slate-950 bg-amber-500 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors cursor-pointer"
             >
               {loading ? "Authenticating..." : "Sign In"}
               <ArrowRight className="w-4 h-4" />
@@ -104,50 +110,34 @@ export default function LoginPage() {
           {/* Quick Demo Logins */}
           <div className="mt-6 pt-6 border-t border-slate-800">
             <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
-              One-Click Demo Profiles
+              One-Click Quick Login
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setDemoRole("sarah.connor@apexconstruction.com")}
-                className="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 text-left transition-colors flex items-center gap-1.5"
+                onClick={() => setDemoRole("vonn@test.com")}
+                className="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 text-left transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <HardHat className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                <span className="truncate">Project Mgr</span>
+                <span className="truncate">vonn@test.com</span>
               </button>
               <button
                 type="button"
-                onClick={() => setDemoRole("marcus.vance@apexconstruction.com")}
-                className="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 text-left transition-colors flex items-center gap-1.5"
+                onClick={() => setDemoRole("sarah.connor@apexconstruction.com")}
+                className="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 text-left transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <UserCheck className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                <span className="truncate">Superintendent</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoRole("elena.rostova@volticelectrical.com")}
-                className="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 text-left transition-colors flex items-center gap-1.5"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                <span className="truncate">Subcontractor</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoRole("david.chen@skylinecorp.com")}
-                className="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 text-left transition-colors flex items-center gap-1.5"
-              >
-                <HardHat className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                <span className="truncate">Owner / Client</span>
+                <span className="truncate">Sarah (Demo PM)</span>
               </button>
             </div>
           </div>
 
           <div className="mt-6 text-center">
             <Link
-              href="/dashboard"
+              href="/signup"
               className="text-xs text-amber-400 hover:text-amber-300 font-semibold"
             >
-              Skip auth and enter Demo Dashboard &rarr;
+              Need an account? Register new user &rarr;
             </Link>
           </div>
         </div>
