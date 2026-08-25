@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  DollarSign,
   TrendingUp,
   Plus,
   ArrowUpRight,

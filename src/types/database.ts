@@ -103,7 +103,7 @@ export interface Task {
   title: string;
   description?: string;
   status: TaskStatus;
-  priority: TaskPriority;
+  priority: task_priority | TaskPriority;
   assigned_to?: string;
   assignee?: Profile;
   trade_category?: string;
@@ -113,6 +113,8 @@ export interface Task {
   order_index: number;
   created_at: string;
 }
+
+export type task_priority = TaskPriority;
 
 export interface DailyLogCrew {
   id: string;
@@ -138,6 +140,7 @@ export interface DailyLog {
   safety_incidents?: string;
   visitors_log?: string;
   crews?: DailyLogCrew[];
+  daily_log_crews?: DailyLogCrew[];
   created_at: string;
 }
 
@@ -150,6 +153,7 @@ export interface ProjectExpense {
   payment_date: string;
   paid_to?: string;
   notes?: string;
+  created_by?: string;
   created_at: string;
 }
 
