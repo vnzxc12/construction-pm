@@ -1,4 +1,4 @@
-﻿export type UserRole =
+export type UserRole =
   | 'admin'
   | 'project_manager'
   | 'superintendent'

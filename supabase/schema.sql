@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- BUILDPULSE - CONSTRUCTION PROJECT MANAGEMENT DATABASE SCHEMA
 -- Compatible with Supabase PostgreSQL, Row Level Security (RLS) & Supabase Storage
 -- ==============================================================================

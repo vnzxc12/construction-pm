@@ -1,4 +1,4 @@
-﻿import {
+import {
   Project,
   Task,
   DailyLog,

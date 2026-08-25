@@ -1,4 +1,4 @@
-﻿# 🏗️ BuildPulse — Construction Project Management Platform
+# 🏗️ BuildPulse — Construction Project Management Platform
 
 A modern, cloud-native Construction Project Management System built with **Next.js (App Router)**, **TypeScript**, and **Tailwind CSS**, powered by **Supabase** (PostgreSQL, Auth, Storage, and Row Level Security), and optimized for **Vercel** zero-config continuous deployment.
 
