@@ -44,7 +44,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         supabase.from("projects").select("*").eq("id", params.id).single(),
         supabase.from("tasks").select("*").eq("project_id", params.id).order("due_date", { ascending: true }).limit(5),
         supabase.from("daily_logs").select("*, daily_log_crews(*)").eq("project_id", params.id).order("log_date", { ascending: false }).limit(3),
-        supabase.from("profiles").select("*").limit(4),
+        supabase.from("profiles").select("*").neq("role", "admin").neq("email", "admin@mbsdesign.com").limit(6),
         supabase.from("project_expenses").select("*").eq("project_id", params.id).order("payment_date", { ascending: false }),
       ]);
 
@@ -55,7 +55,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         const allCrews = (logsRes.data as any[]).flatMap((l) => l.daily_log_crews || []);
         setCrews(allCrews);
       }
-      if (profilesRes.data) setTeamMembers(profilesRes.data);
+      if (profilesRes.data) setTeamMembers(profilesRes.data.filter((m: any) => m.role !== "admin" && m.email !== "admin@mbsdesign.com"));
       if (expRes.data) setExpenses(expRes.data);
 
       setLoading(false);
