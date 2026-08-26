@@ -10,6 +10,7 @@ import {
   MapPin,
   HardHat,
   Loader2,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project, ProjectStatus } from "@/types/database";
@@ -25,7 +26,7 @@ export default function ProjectsPage() {
   const [creating, setCreating] = useState(false);
 
   // Form State for new project
-  const [newCode, setNewCode] = useState("MBS-2026-001");
+  const [newCode, setNewCode] = useState("MBS-2026-002");
   const [newName, setNewName] = useState("");
   const [newClient, setNewClient] = useState("");
   const [newBudget, setNewBudget] = useState("500000");
@@ -58,7 +59,6 @@ export default function ProjectsPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 1. Ensure profile exists in profiles table to satisfy foreign key
     if (user) {
       await supabase.from("profiles").upsert(
         {
@@ -76,7 +76,7 @@ export default function ProjectsPage() {
       name: newName,
       description: "Active renovation and construction project.",
       address: newAddress || "Site Location",
-      city: newCity || "Metro Manila",
+      city: newCity || "Batangas",
       client_name: newClient || "Client",
       status: "in_progress" as ProjectStatus,
       budget: parseFloat(newBudget) || 500000,
@@ -100,7 +100,6 @@ export default function ProjectsPage() {
       setNewClient("");
       setNewAddress("");
     } else if (error) {
-      console.error("Error creating project in Supabase:", error.message);
       alert(`Error creating project: ${error.message}`);
     }
 
@@ -121,10 +120,10 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Projects Directory
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Manage your live job sites directly in PostgreSQL.
           </p>
         </div>
@@ -140,15 +139,15 @@ export default function ProjectsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search projects by name, code, client..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white dark:focus:bg-slate-900"
           />
         </div>
 
@@ -161,8 +160,8 @@ export default function ProjectsPage() {
               onClick={() => setFilterStatus(status)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors cursor-pointer ${
                 filterStatus === status
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
               }`}
             >
               {status.replace("_", " ")}
@@ -173,17 +172,17 @@ export default function ProjectsPage() {
 
       {/* Projects Grid / Empty State */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center text-slate-500 space-y-3">
+        <div className="py-20 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
           <span className="text-sm font-medium">Connecting to Supabase Database...</span>
         </div>
       ) : filteredProjects.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-12 text-center max-w-lg mx-auto">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
             <HardHat className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900">No Projects in Database</h3>
-          <p className="text-xs text-slate-500 mt-1 mb-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Projects in Database</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-6">
             Your live Supabase database is connected. Click below to create your first construction project site.
           </p>
           <button
@@ -202,9 +201,9 @@ export default function ProjectsPage() {
             return (
               <div
                 key={project.id}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden"
+                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden"
               >
-                <div className="h-40 relative bg-slate-100">
+                <div className="h-40 relative bg-slate-100 dark:bg-slate-800">
                   <img
                     src={project.cover_image_url || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80"}
                     alt={project.name}
@@ -220,31 +219,31 @@ export default function ProjectsPage() {
 
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">
                       {project.name}
                     </h3>
-                    <div className="flex items-center gap-1 text-xs text-slate-500 mt-1.5">
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       <MapPin className="w-3.5 h-3.5 text-slate-400" />
                       <span>{project.address}, {project.city}</span>
                     </div>
-                    <div className="text-xs text-slate-600 mt-2">
-                      <span className="font-semibold text-slate-700">Client:</span> {project.client_name}
+                    <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">Client:</span> {project.client_name}
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-100 space-y-3">
+                  <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
                     <div>
                       <div className="flex justify-between text-xs font-medium mb-1">
-                        <span className="text-slate-500">Budget Progress</span>
-                        <span className="text-slate-900 font-bold">{progress}%</span>
+                        <span className="text-slate-500 dark:text-slate-400">Budget Progress</span>
+                        <span className="text-slate-900 dark:text-white font-bold">{progress}%</span>
                       </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-amber-500 rounded-full"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-[11px] text-slate-500 mt-1">
+                      <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                         <span>Spent: {formatCurrency(project.spent)}</span>
                         <span>Total: {formatCurrency(project.budget)}</span>
                       </div>
@@ -252,7 +251,7 @@ export default function ProjectsPage() {
 
                     <Link
                       href={`/dashboard/projects/${project.id}/overview`}
-                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <span>Open Site Operations</span>
                       <ArrowUpRight className="w-3.5 h-3.5" />
@@ -268,15 +267,26 @@ export default function ProjectsPage() {
       {/* Create Project Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">Initialize New Project</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Creates a new record in your Supabase `projects` PostgreSQL table.
-            </p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Initialize New Project</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Creates a new record in your Supabase `projects` table.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleCreateProject} className="space-y-4 mt-5">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Project Code
                 </label>
                 <input
@@ -284,12 +294,12 @@ export default function ProjectsPage() {
                   required
                   value={newCode}
                   onChange={(e) => setNewCode(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Project Name
                 </label>
                 <input
@@ -297,14 +307,14 @@ export default function ProjectsPage() {
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Serrano's Dining Renovation"
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="e.g. Master Bedroom Renovation"
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Client Name
                   </label>
                   <input
@@ -313,12 +323,12 @@ export default function ProjectsPage() {
                     value={newClient}
                     onChange={(e) => setNewClient(e.target.value)}
                     placeholder="e.g. Billy Serrano"
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Budget (₱)
                   </label>
                   <input
@@ -326,14 +336,14 @@ export default function ProjectsPage() {
                     required
                     value={newBudget}
                     onChange={(e) => setNewBudget(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Job Site Address
                   </label>
                   <input
@@ -341,12 +351,12 @@ export default function ProjectsPage() {
                     value={newAddress}
                     onChange={(e) => setNewAddress(e.target.value)}
                     placeholder="e.g. Lalayat San Jose"
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     City
                   </label>
                   <input
@@ -354,16 +364,16 @@ export default function ProjectsPage() {
                     value={newCity}
                     onChange={(e) => setNewCity(e.target.value)}
                     placeholder="e.g. Batangas"
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>

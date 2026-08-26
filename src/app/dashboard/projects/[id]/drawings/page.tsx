@@ -168,7 +168,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
             <span className="text-xs font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
               {project?.code || "MBS"}
             </span>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               Drawings, Plans & Blueprints Storage
             </h1>
           </div>
@@ -188,7 +188,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
           <input
@@ -241,7 +241,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
           <span className="text-sm font-medium">Loading Plans from Supabase Storage...</span>
         </div>
       ) : filteredDocs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 border-slate-300 p-12 text-center max-w-lg mx-auto">
           <FileSpreadsheet className="w-10 h-10 text-slate-400 mx-auto mb-2" />
           <h3 className="text-base font-bold text-slate-900">No Plans Uploaded Yet</h3>
           <p className="text-xs text-slate-500 mt-1 mb-6">
@@ -263,7 +263,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
             return (
               <div
                 key={doc.id}
-                className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
+                className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
@@ -324,7 +324,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
       {/* Real Upload Blueprint Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Upload Plan / Drawing</h2>
@@ -397,7 +397,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
                   value={docTitle}
                   onChange={(e) => setDocTitle(e.target.value)}
                   placeholder="e.g. Kitchen Cabinetry & Electrical Layout"
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -412,7 +412,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
                     value={sheetNumber}
                     onChange={(e) => setSheetNumber(e.target.value)}
                     placeholder="e.g. A-101"
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
@@ -423,7 +423,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
                   <select
                     value={docCategory}
                     onChange={(e) => setDocCategory(e.target.value as DocCategory)}
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
                   >
                     <option value="architectural">Architectural Plan</option>
                     <option value="structural">Structural Drawing</option>

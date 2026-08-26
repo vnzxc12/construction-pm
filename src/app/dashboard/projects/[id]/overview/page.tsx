@@ -52,8 +52,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
       if (tasksRes.data) setProjectTasks(tasksRes.data);
       if (logsRes.data) {
         setProjectLogs(logsRes.data);
-        // Collect latest crews
-        const allCrews = logsRes.data.flatMap((l) => l.daily_log_crews || []);
+        const allCrews = (logsRes.data as any[]).flatMap((l) => l.daily_log_crews || []);
         setCrews(allCrews);
       }
       if (profilesRes.data) setTeamMembers(profilesRes.data);
@@ -106,7 +105,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
 
   if (loading) {
     return (
-      <div className="py-24 flex flex-col items-center justify-center text-slate-500 space-y-3">
+      <div className="py-24 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 space-y-3">
         <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
         <span className="text-sm font-medium">Loading Job Site Details from Supabase...</span>
       </div>
@@ -115,15 +114,15 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
 
   if (!project) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto">
-        <Building2 className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-        <h2 className="text-lg font-bold text-slate-900">Project Not Found</h2>
-        <p className="text-xs text-slate-500 mt-1 mb-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center max-w-lg mx-auto">
+        <Building2 className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Project Not Found</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
           This project could not be found in your database.
         </p>
         <Link
           href="/dashboard/projects"
-          className="px-4 py-2 bg-slate-900 text-white font-semibold rounded-lg text-xs"
+          className="px-4 py-2 bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-semibold rounded-lg text-xs"
         >
           &larr; Back to Projects Directory
         </Link>
@@ -131,7 +130,6 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
     );
   }
 
-  // Calculate actual total spent from logged expenses or projects table
   const totalSpent = expenses.length > 0
     ? expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0)
     : project.spent || 0;
@@ -144,7 +142,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
   return (
     <div className="space-y-6">
       {/* Site Header Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative transition-colors">
         <div className="h-48 relative bg-slate-900">
           <img
             src={project.cover_image_url || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80"}
@@ -202,7 +200,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
             <div className="flex items-center gap-2">
               <Link
                 href={`/dashboard/projects/${project.id}/budget`}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 font-semibold rounded-lg text-xs shadow transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 font-semibold rounded-lg text-xs shadow transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Receipt className="w-4 h-4 text-amber-400" />
                 <span>Log Payment</span>
@@ -219,39 +217,39 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         </div>
 
         {/* Quick Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100 border-t border-slate-100 p-4 bg-slate-50/50">
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="px-4 py-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Contract Budget
             </span>
-            <span className="text-lg font-bold text-slate-900 mt-0.5 block">
+            <span className="text-lg font-bold text-slate-900 dark:text-white mt-0.5 block">
               {formatCurrency(project.budget)}
             </span>
           </div>
           <div className="px-4 py-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Spent to Date
             </span>
-            <span className="text-lg font-bold text-amber-600 mt-0.5 block">
+            <span className="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">
               {formatCurrency(totalSpent)}
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
               {financialPercent}% utilized
             </span>
           </div>
           <div className="px-4 py-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Target Completion
             </span>
-            <span className="text-lg font-bold text-slate-900 mt-0.5 block">
+            <span className="text-lg font-bold text-slate-900 dark:text-white mt-0.5 block">
               {formatDate(project.target_completion_date)}
             </span>
           </div>
           <div className="px-4 py-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Active Trade Workers
             </span>
-            <span className="text-lg font-bold text-emerald-600 mt-0.5 block">
+            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
               {totalWorkersOnSite > 0 ? `${totalWorkersOnSite} On Site` : "Team Ready"}
             </span>
           </div>
@@ -262,32 +260,32 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Progress Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-sm">Schedule & Milestone Progress</h3>
-              <span className="text-xs font-bold text-amber-600">{progressPercent}% Tasks Completed</span>
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">Schedule & Milestone Progress</h3>
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{progressPercent}% Tasks Completed</span>
             </div>
-            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-4">
+            <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
               <div
                 className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               {project.description || "Active construction site operations."}
             </p>
           </div>
 
           {/* Recent Payments / Expenses */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
                 <Receipt className="w-4 h-4 text-amber-500" />
                 <span>Recent Payments & Disbursements</span>
               </h3>
               <Link
                 href={`/dashboard/projects/${project.id}/budget`}
-                className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center gap-1"
               >
                 <span>Full Financials</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -295,11 +293,11 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
             </div>
 
             {expenses.length === 0 ? (
-              <div className="py-6 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
                 <p>No payments or labor payroll logged yet.</p>
                 <Link
                   href={`/dashboard/projects/${project.id}/budget`}
-                  className="text-amber-600 font-bold mt-1.5 inline-block hover:underline"
+                  className="text-amber-600 dark:text-amber-400 font-bold mt-1.5 inline-block hover:underline"
                 >
                   + Log First Payment (e.g. ₱10,000)
                 </Link>
@@ -309,13 +307,13 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
                 {expenses.slice(0, 3).map((exp) => (
                   <div
                     key={exp.id}
-                    className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between gap-3 text-xs"
+                    className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 text-xs"
                   >
                     <div>
-                      <span className="font-bold text-slate-900 block">{exp.title}</span>
-                      <span className="text-[11px] text-slate-500">{exp.category} &bull; Paid to {exp.paid_to} &bull; {formatDate(exp.payment_date)}</span>
+                      <span className="font-bold text-slate-900 dark:text-white block">{exp.title}</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">{exp.category} &bull; Paid to {exp.paid_to} &bull; {formatDate(exp.payment_date)}</span>
                     </div>
-                    <span className="font-bold text-amber-600 font-mono text-sm">
+                    <span className="font-bold text-amber-600 dark:text-amber-400 font-mono text-sm">
                       {formatCurrency(exp.amount)}
                     </span>
                   </div>
@@ -325,12 +323,12 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           </div>
 
           {/* Critical Path Tasks */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-900 text-sm">Active Site Schedule</h3>
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">Active Site Schedule</h3>
               <Link
                 href={`/dashboard/projects/${project.id}/tasks`}
-                className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center gap-1"
               >
                 <span>Full Kanban Board</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -338,22 +336,22 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
             </div>
 
             {projectTasks.length === 0 ? (
-              <p className="text-xs text-slate-400 py-6 text-center">No tasks recorded for this site yet.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 py-6 text-center">No tasks recorded for this site yet.</p>
             ) : (
               <div className="space-y-3">
                 {projectTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between gap-3"
+                    className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
                   >
                     <div>
                       <div className="flex items-center gap-2">
                         <PriorityBadge priority={task.priority} />
-                        <span className="text-xs font-semibold text-slate-700">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                           {task.trade_category || "General"}
                         </span>
                       </div>
-                      <h4 className="text-xs font-bold text-slate-900 mt-1">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1">
                         {task.title}
                       </h4>
                     </div>
@@ -368,23 +366,23 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         {/* Right Column */}
         <div className="space-y-6">
           {/* Site Workers & Trade Manpower Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
                 <HardHat className="w-4 h-4 text-amber-500" />
                 <span>Site Workers & Trade Manpower</span>
               </h3>
-              <span className="text-xs font-bold text-emerald-600 font-mono">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                 {totalWorkersOnSite} Active
               </span>
             </div>
 
             {crews.length === 0 ? (
-              <div className="py-5 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              <div className="py-5 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
                 <p>Log your daily field report to track carpenters, masons, electricians, and painters.</p>
                 <Link
                   href={`/dashboard/projects/${project.id}/daily-logs`}
-                  className="text-amber-600 font-bold mt-1.5 inline-block hover:underline"
+                  className="text-amber-600 dark:text-amber-400 font-bold mt-1.5 inline-block hover:underline"
                 >
                   + Add Daily Field Report
                 </Link>
@@ -394,13 +392,13 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
                 {crews.map((crew) => (
                   <div
                     key={crew.id}
-                    className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-xs"
+                    className="p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
                   >
                     <div>
-                      <span className="font-bold text-slate-900 block">{crew.contractor_name}</span>
-                      <span className="text-[10px] text-slate-500">{crew.trade} &bull; {crew.hours_worked} hrs/day</span>
+                      <span className="font-bold text-slate-900 dark:text-white block">{crew.contractor_name}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">{crew.trade} &bull; {crew.hours_worked} hrs/day</span>
                     </div>
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-900 font-bold rounded font-mono">
+                    <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-bold rounded font-mono">
                       {crew.worker_count} Workers
                     </span>
                   </div>
@@ -410,9 +408,9 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           </div>
 
           {/* Latest Daily Field Report */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
                 <FileText className="w-4 h-4 text-amber-500" />
                 <span>Latest Field Report</span>
               </h3>
@@ -420,32 +418,32 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
 
             {projectLogs.length > 0 ? (
               <div className="space-y-3 text-xs">
-                <div className="bg-amber-50/60 p-2.5 rounded-lg border border-amber-200/50">
-                  <span className="font-bold text-amber-900 block mb-1">Weather & Site Conditions</span>
-                  <p className="text-amber-800">{projectLogs[0].weather_condition}</p>
+                <div className="bg-amber-50/60 dark:bg-amber-500/10 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-500/20">
+                  <span className="font-bold text-amber-900 dark:text-amber-300 block mb-1">Weather & Site Conditions</span>
+                  <p className="text-amber-800 dark:text-amber-400">{projectLogs[0].weather_condition}</p>
                 </div>
 
                 <div>
-                  <span className="font-bold text-slate-800 block mb-1">Work Accomplished</span>
-                  <p className="text-slate-600 leading-relaxed text-[11px]">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">Work Accomplished</span>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
                     {projectLogs[0].work_performed}
                   </p>
                 </div>
 
                 <Link
                   href={`/dashboard/projects/${project.id}/daily-logs`}
-                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors"
+                  className="w-full py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors"
                 >
                   <span>View All Daily Logs</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             ) : (
-              <div className="text-center py-6 text-xs text-slate-400">
+              <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500">
                 <p>No daily reports logged yet.</p>
                 <Link
                   href={`/dashboard/projects/${project.id}/daily-logs`}
-                  className="text-amber-600 font-semibold mt-2 inline-block hover:underline"
+                  className="text-amber-600 dark:text-amber-400 font-semibold mt-2 inline-block hover:underline"
                 >
                   + Add First Daily Log
                 </Link>
@@ -454,8 +452,8 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           </div>
 
           {/* Leadership Directory */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-3 flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-500" />
               <span>Project Leadership</span>
             </h3>
@@ -467,11 +465,11 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
                     {member.full_name?.substring(0, 2).toUpperCase() || "AD"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                       {member.full_name}
                     </h4>
-                    <p className="text-[10px] text-slate-500 capitalize">
-                      {member.role?.replace("_", " ")} &bull; {member.company_name || "MBS Design Studio"}
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">
+                      {member.role?.replace("_", " ")} &bull; {member.company_name || "MBS Studio"}
                     </p>
                   </div>
                 </div>

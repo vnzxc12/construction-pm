@@ -157,7 +157,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
             <span className="text-xs font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
               {project?.code || "MBS"}
             </span>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               Daily Field Reports & Trade Manpower
             </h1>
           </div>
@@ -205,7 +205,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
             return (
               <div
                 key={log.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-5"
               >
                 {/* Log Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
@@ -248,7 +248,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                     Work Completed Today
                   </h4>
-                  <p className="text-sm text-slate-800 bg-slate-50 p-4 rounded-xl border border-slate-200/70 leading-relaxed">
+                  <p className="text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800 leading-relaxed">
                     {log.work_performed}
                   </p>
                 </div>
@@ -311,7 +311,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
       {/* New Daily Log Modal with Crew Manpower Builder */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Record Daily Field Report</h2>
@@ -339,7 +339,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
                     required
                     value={logDate}
                     onChange={(e) => setLogDate(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
@@ -352,7 +352,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
                     required
                     value={weather}
                     onChange={(e) => setWeather(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
@@ -367,7 +367,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
                   value={workDone}
                   onChange={(e) => setWorkDone(e.target.value)}
                   placeholder="Detail daily accomplishments, framing, tiling, carpentry, electrical..."
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -445,7 +445,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
                   value={delays}
                   onChange={(e) => setDelays(e.target.value)}
                   placeholder="Material delivery delays, rain hold, power cut..."
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -457,7 +457,7 @@ export default function DailyLogsPage({ params }: { params: { id: string } }) {
                   type="text"
                   value={safetyNotes}
                   onChange={(e) => setSafetyNotes(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 

@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Bell, Search, PlusCircle, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project } from "@/types/database";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface UserProfile {
   name: string;
@@ -30,7 +31,6 @@ export function Header() {
 
     async function loadData() {
       try {
-        // 1. Fetch Auth User & Profile
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: dbProfile } = await supabase
@@ -59,7 +59,6 @@ export function Header() {
         console.warn("Could not load user profile:", err);
       }
 
-      // 2. Fetch Projects
       try {
         const { data: projectList } = await supabase
           .from("projects")
@@ -78,7 +77,6 @@ export function Header() {
 
     loadData();
 
-    // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const user = session.user;
@@ -122,7 +120,7 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm transition-colors">
       {/* Project Switcher & Search */}
       <div className="flex items-center gap-4 flex-1 max-w-xl">
         <div className="relative w-full max-w-xs">
@@ -130,7 +128,7 @@ export function Header() {
           <select
             id="project-selector"
             aria-label="Select active project"
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-3 pr-8 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-pointer"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-1.5 pl-3 pr-8 text-sm font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white dark:focus:bg-slate-900 cursor-pointer transition-colors"
             value={selectedProjectId}
             onChange={(e) => {
               const val = e.target.value;
@@ -155,11 +153,11 @@ export function Header() {
         </div>
 
         <div className="relative flex-1 hidden md:block">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Search active site records..."
-            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-colors"
           />
         </div>
       </div>
@@ -169,19 +167,22 @@ export function Header() {
         {selectedProjectId && (
           <Link
             href={`/dashboard/projects/${selectedProjectId}/daily-logs`}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-lg text-xs shadow-sm transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-lg text-xs shadow-sm transition-colors"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>New Daily Log</span>
           </Link>
         )}
 
-        <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+        {/* Dark Mode Toggle */}
+        <ThemeToggle />
+
+        <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200 dark:border-slate-800">
           {profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}
               alt={profile.name}
-              className="w-8 h-8 rounded-full object-cover ring-1 border"
+              className="w-8 h-8 rounded-full object-cover ring-1 border dark:border-slate-700"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shadow-sm">
@@ -189,10 +190,10 @@ export function Header() {
             </div>
           )}
           <div className="hidden lg:block text-left">
-            <span className="block text-xs font-semibold text-slate-900 leading-tight">
+            <span className="block text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight">
               {profile.name}
             </span>
-            <span className="block text-[10px] text-slate-500 uppercase font-semibold">
+            <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold">
               {profile.role?.replace("_", " ")}
             </span>
           </div>
@@ -200,7 +201,7 @@ export function Header() {
             type="button"
             onClick={handleSignOut}
             aria-label="Sign out"
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors ml-1 cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors ml-1 cursor-pointer"
             title="Sign out"
           >
             <LogOut className="w-4 h-4" />

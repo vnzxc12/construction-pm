@@ -134,11 +134,11 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
             <span className="text-xs font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
               {project?.code || "MBS"}
             </span>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               Project Budget & Cost Control
             </h1>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Log worker payroll, material purchases, and track remaining budget in real time.
           </p>
         </div>
@@ -155,17 +155,17 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
 
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
             Approved Contract Budget
           </span>
           <span className="text-2xl font-bold text-slate-900 mt-1 block">
             {formatCurrency(totalOriginal)}
           </span>
-          <span className="text-xs text-slate-500 mt-1 block">Baseline contract ceiling</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Baseline contract ceiling</span>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
             Total Paid / Spent
           </span>
@@ -177,33 +177,33 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
           </span>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
             Remaining Balance
           </span>
           <span className={`text-2xl font-bold mt-1 block ${remainingContingency >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
             {formatCurrency(remainingContingency)}
           </span>
-          <span className="text-xs text-slate-500 mt-1 block">
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
             {remainingContingency >= 0 ? "Available funds" : "Over budget"}
           </span>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
             Logged Payments
           </span>
           <span className="text-2xl font-bold text-slate-900 mt-1 block">
             {expenses.length} Records
           </span>
-          <span className="text-xs text-slate-500 mt-1 block">
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
             Payroll & materials
           </span>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
         <div className="flex justify-between text-xs font-bold mb-2">
           <span className="text-slate-700">Financial Budget Utilization</span>
           <span className="text-amber-600">{formatCurrency(totalActual)} / {formatCurrency(totalOriginal)} ({utilization}%)</span>
@@ -217,7 +217,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Live Payment & Expense History Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors overflow-hidden">
         <div className="p-5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-amber-500" />
@@ -243,7 +243,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
           <div className="p-12 text-center text-slate-500">
             <Wallet className="w-10 h-10 text-slate-400 mx-auto mb-2" />
             <h4 className="text-sm font-bold text-slate-800">No Payments Logged Yet</h4>
-            <p className="text-xs text-slate-500 mt-1 mb-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
               Paid weekly worker wages, materials, or subcontractors? Click below to log it.
             </p>
             <button
@@ -258,7 +258,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200">
                 <tr>
                   <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Expense / Payment Title</th>
@@ -267,14 +267,14 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
                   <th className="px-5 py-3 text-right">Amount (PHP)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {expenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-slate-50/60 transition-colors">
+                  <tr key={exp.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="px-5 py-3.5 font-mono text-slate-500">
                       {formatDate(exp.payment_date)}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="font-bold text-slate-900 block text-sm">{exp.title}</span>
+                      <span className="font-bold text-slate-900 dark:text-white block text-sm">{exp.title}</span>
                       {exp.notes && (
                         <span className="text-[11px] text-slate-500 block mt-0.5">{exp.notes}</span>
                       )}
@@ -311,7 +311,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
       {/* Log Payment / Expense Modal */}
       {showExpenseModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Log Project Payment / Expense</h2>
@@ -339,7 +339,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
                   value={expTitle}
                   onChange={(e) => setExpTitle(e.target.value)}
                   placeholder="e.g. Weekly Carpenter Labor Payroll (Week 1)"
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -354,7 +354,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
                     value={expAmount}
                     onChange={(e) => setExpAmount(e.target.value)}
                     placeholder="10000"
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm font-bold font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900"
                   />
                 </div>
 
@@ -367,7 +367,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
                     required
                     value={expDate}
                     onChange={(e) => setExpDate(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
@@ -380,7 +380,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
                   <select
                     value={expCategory}
                     onChange={(e) => setExpCategory(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
                   >
                     {EXPENSE_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
@@ -399,7 +399,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
                     value={expPaidTo}
                     onChange={(e) => setExpPaidTo(e.target.value)}
                     placeholder="e.g. Mang Jose (Carpentry Lead)"
-                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
@@ -413,7 +413,7 @@ export default function BudgetPage({ params }: { params: { id: string } }) {
                   value={expNotes}
                   onChange={(e) => setExpNotes(e.target.value)}
                   placeholder="Notes on scope, materials breakdown, or acknowledgement..."
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
