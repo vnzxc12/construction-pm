@@ -1,135 +1,216 @@
-import React from "react";
-import Link from "next/link";
-import {
-  Building2,
-  CalendarCheck,
-  ListTodo,
-  FileSpreadsheet,
-  AlertTriangle,
-  ArrowRight,
-  Database,
-  Cloud,
-  Github,
-  ShieldCheck,
-  Zap,
-} from "lucide-react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Lock, User, ArrowRight, Shield, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { BRAND_CONFIG } from "@/lib/brand.config";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
-export default function LandingPage() {
+export default function MainPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // If already logged in, redirect immediately to dashboard
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          router.replace("/dashboard");
+          return;
+        }
+      } catch (err) {
+        console.warn("Session check:", err);
+      } finally {
+        setCheckingAuth(false);
+      }
+    }
+    checkSession();
+  }, [router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const rawInput = username.trim().toLowerCase();
+      let targetEmail = rawInput;
+
+      // Handle username login mapping
+      if (!rawInput.includes("@")) {
+        if (rawInput === "admin") {
+          targetEmail = "admin@mbsdesign.com";
+        } else {
+          // Look up user email in profiles
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("email")
+            .or(`email.ilike.${rawInput}@%,email.ilike.${rawInput}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (profile?.email) {
+            targetEmail = profile.email;
+          } else {
+            targetEmail = `${rawInput}@mbsdesign.com`;
+          }
+        }
+      }
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: targetEmail,
+        password,
+      });
+
+      if (authError) {
+        // Fallback domain retry
+        if (!rawInput.includes("@") && targetEmail.endsWith("@mbsdesign.com")) {
+          const secondTry = await supabase.auth.signInWithPassword({
+            email: `${rawInput}@test.com`,
+            password,
+          });
+
+          if (!secondTry.error) {
+            router.push("/dashboard");
+            return;
+          }
+        }
+
+        setError(
+          authError.message === "Invalid login credentials"
+            ? "Invalid username or password. Please check your credentials."
+            : authError.message
+        );
+        setLoading(false);
+        return;
+      }
+
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err?.message || "Failed to sign in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <span className="text-xs font-mono">Connecting to MBS Studio Portal...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-amber-500 selection:text-slate-950">
-      {/* Navigation Bar */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20 font-black text-base tracking-tighter">
-              {BRAND_CONFIG.initials}
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-between py-10 px-4 sm:px-6 lg:px-8 selection:bg-amber-500 selection:text-slate-950 relative">
+      {/* Top Bar with Theme Switcher */}
+      <div className="max-w-md w-full mx-auto flex items-center justify-end">
+        <ThemeToggle />
+      </div>
+
+      {/* Main Login Card */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md my-auto">
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <img
+            src={BRAND_CONFIG.logoUrl || "/mbs-logo.png"}
+            alt={BRAND_CONFIG.companyName}
+            className="w-20 h-20 mx-auto rounded-2xl object-contain bg-white p-2.5 shadow-2xl shadow-slate-900 border border-slate-800 mb-4"
+          />
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+            {BRAND_CONFIG.companyName}
+          </h1>
+          <p className="mt-1.5 text-xs text-amber-400 font-semibold tracking-widest uppercase">
+            {BRAND_CONFIG.tagline}
+          </p>
+        </div>
+
+        {/* Login Box */}
+        <div className="bg-slate-900 py-8 px-6 shadow-2xl rounded-2xl border border-slate-800 sm:px-10">
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+              {error}
             </div>
+          )}
+
+          <form className="space-y-5" onSubmit={handleLogin}>
             <div>
-              <span className="font-bold text-white tracking-wide text-lg">{BRAND_CONFIG.companyName}</span>
-              <span className="block text-[10px] text-amber-400 font-semibold uppercase tracking-widest">
-                {BRAND_CONFIG.tagline}
-              </span>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Username
+              </label>
+              <div className="mt-1.5 relative">
+                <User className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-slate-500"
+                  placeholder="e.g. admin"
+                  autoComplete="username"
+                  autoFocus
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <Link
-              href="/login"
-              className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Password
+              </label>
+              <div className="mt-1.5 relative">
+                <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-slate-500"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl shadow-lg text-sm font-bold text-slate-950 bg-amber-500 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all hover:scale-[1.01] cursor-pointer"
             >
-              Sign In
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-sm shadow-md transition-all hover:scale-[1.02]"
-            >
-              <span>Enter Portal</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </header>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In to Portal</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
 
-      {/* Hero Section */}
-      <section className="py-20 px-6 max-w-7xl mx-auto text-center flex flex-col items-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-6">
-          <Zap className="w-3.5 h-3.5" />
-          <span>Proprietary Design & Construction Platform</span>
-        </div>
-
-        <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight max-w-4xl leading-tight">
-          Field-to-Office Project Management for <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">{BRAND_CONFIG.companyName}</span>
-        </h1>
-
-        <p className="mt-6 text-lg text-slate-400 max-w-2xl">
-          Empowering our architects, engineers, trade contractors, and clients with real-time daily field logs, multi-version blueprint management, interactive task scheduling, and quality punch lists.
-        </p>
-
-        {/* Action Buttons */}
-        <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <Link
-            href="/dashboard"
-            className="px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-base shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2"
-          >
-            <span>Open Project Portal</span>
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-          <Link
-            href="/dashboard/projects"
-            className="px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-base border border-slate-700 transition-all flex items-center gap-2"
-          >
-            <Building2 className="w-5 h-5 text-amber-400" />
-            <span>Active Job Sites Directory</span>
-          </Link>
-        </div>
-      </section>
-
-      {/* Feature Grid */}
-      <section className="py-16 bg-slate-900/50 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">Engineered for Architecture & Construction Excellence</h2>
-            <p className="text-slate-400 mt-2 text-sm">Real-time collaboration across design, permits, structural work, and interior fitout.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center mb-4">
-                <CalendarCheck className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-white">Daily Field Logs & Weather</h3>
-              <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-                Log daily site conditions, weather, trade manpower, and safety compliance directly from tablet or mobile.
-              </p>
-            </div>
-
-            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4">
-                <ListTodo className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-white">Milestone Kanban Scheduling</h3>
-              <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-                Track architectural deliverables, structural inspections, and trade progress across custom status lanes.
-              </p>
-            </div>
-
-            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-4">
-                <FileSpreadsheet className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-white">Blueprints & Document Storage</h3>
-              <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-                Manage architectural, structural, and interior drawing revisions backed by secure cloud storage.
-              </p>
+          <div className="mt-6 pt-5 border-t border-slate-800/80 text-center">
+            <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+              <Shield className="w-3.5 h-3.5 text-amber-500/70" />
+              <span>Authorized Access &bull; Managed by MBS Studio</span>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-800 py-8 px-6 text-center text-xs text-slate-500">
-        <p>{BRAND_CONFIG.companyName} • {BRAND_CONFIG.tagline}</p>
+      <footer className="max-w-md w-full mx-auto text-center text-[11px] text-slate-600">
+        <p>© {new Date().getFullYear()} {BRAND_CONFIG.companyName}. All rights reserved.</p>
       </footer>
     </div>
   );
