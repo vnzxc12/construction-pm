@@ -15,14 +15,13 @@ import {
   Coins,
   Settings,
   FolderOpen,
-  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Project } from "@/types/database";
 import { BRAND_CONFIG } from "@/lib/brand.config";
 
-export function Sidebar() {
+export function Sidebar({ className, onClose }: { className?: string; onClose?: () => void }) {
   const pathname = usePathname();
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
@@ -110,20 +109,19 @@ export function Sidebar() {
     : [];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 h-screen sticky top-0 border-r border-slate-800 z-30">
+    <aside
+      className={cn(
+        "w-64 bg-slate-900 text-slate-300 flex-col flex-shrink-0 h-screen sticky top-0 border-r border-slate-800 z-30 hidden lg:flex",
+        className
+      )}
+    >
       {/* Brand Header */}
       <div className="h-16 flex items-center px-5 border-b border-slate-800 gap-3 bg-slate-950">
-        {BRAND_CONFIG.logoUrl ? (
-          <img
-            src={BRAND_CONFIG.logoUrl}
-            alt={BRAND_CONFIG.companyName}
-            className="w-9 h-9 rounded-lg object-contain bg-white p-1"
-          />
-        ) : (
-          <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 shadow-md font-extrabold text-sm tracking-tighter">
-            {BRAND_CONFIG.initials}
-          </div>
-        )}
+        <img
+          src={BRAND_CONFIG.logoUrl || "/mbs-logo.png"}
+          alt={BRAND_CONFIG.companyName}
+          className="w-9 h-9 rounded-lg object-contain bg-white p-1 flex-shrink-0"
+        />
         <div className="min-w-0 flex-1">
           <span className="font-bold text-white tracking-tight text-sm block truncate">
             {BRAND_CONFIG.companyName}
@@ -145,6 +143,7 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                   item.active
@@ -171,6 +170,7 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={onClose}
                   className={cn(
                     "flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
                     item.active
@@ -194,6 +194,7 @@ export function Sidebar() {
             </p>
             <Link
               href="/dashboard/projects"
+              onClick={onClose}
               className="mt-2 inline-block text-amber-400 hover:underline font-semibold"
             >
               + Create Project
@@ -206,6 +207,7 @@ export function Sidebar() {
       <div className="p-3 border-t border-slate-800 bg-slate-950/60">
         <Link
           href="/dashboard/settings"
+          onClick={onClose}
           className={cn(
             "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
             pathname === "/dashboard/settings"
