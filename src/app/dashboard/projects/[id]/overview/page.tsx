@@ -18,6 +18,8 @@ import {
   HardHat,
   Receipt,
   Plus,
+  Edit2,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project, Task, DailyLog, Profile, DailyLogCrew, ProjectExpense } from "@/types/database";
@@ -35,6 +37,11 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
   const [uploadingCover, setUploadingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit Contract Budget Modal State
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [contractBudgetInput, setContractBudgetInput] = useState("500000");
+  const [savingBudget, setSavingBudget] = useState(false);
+
   useEffect(() => {
     async function loadProjectDetails() {
       setLoading(true);
@@ -48,14 +55,19 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         supabase.from("project_expenses").select("*").eq("project_id", params.id).order("payment_date", { ascending: false }),
       ]);
 
-      if (projRes.data) setProject(projRes.data);
+      if (projRes.data) {
+        setProject(projRes.data);
+        setContractBudgetInput(projRes.data.budget?.toString() || "500000");
+      }
       if (tasksRes.data) setProjectTasks(tasksRes.data);
       if (logsRes.data) {
         setProjectLogs(logsRes.data);
         const allCrews = (logsRes.data as any[]).flatMap((l) => l.daily_log_crews || []);
         setCrews(allCrews);
       }
-      if (profilesRes.data) setTeamMembers(profilesRes.data.filter((m: any) => m.role !== "admin" && m.email !== "admin@mbsdesign.com"));
+      if (profilesRes.data) {
+        setTeamMembers(profilesRes.data.filter((m: any) => m.role !== "admin" && m.email !== "admin@mbsdesign.com"));
+      }
       if (expRes.data) setExpenses(expRes.data);
 
       setLoading(false);
@@ -79,16 +91,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        if (
-          uploadError.message.includes("violates row-level security policy") ||
-          uploadError.message.includes("row-level security")
-        ) {
-          alert(
-            `Storage RLS Error: Row-level security policy prevented photo upload.\n\nPlease execute 'supabase/storage_and_drawings_fix.sql' in your Supabase SQL Editor.`
-          );
-        } else {
-          alert(`Storage upload error: ${uploadError.message}`);
-        }
+        alert(`Storage upload error: ${uploadError.message}`);
         setUploadingCover(false);
         return;
       }
@@ -110,6 +113,34 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
     } finally {
       setUploadingCover(false);
     }
+  };
+
+  const handleSaveContractBudget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newBudgetNum = parseFloat(contractBudgetInput);
+    if (isNaN(newBudgetNum) || newBudgetNum < 0) {
+      alert("Please enter a valid positive contract budget amount.");
+      return;
+    }
+
+    setSavingBudget(true);
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("projects")
+      .update({ budget: newBudgetNum })
+      .eq("id", params.id);
+
+    if (!error) {
+      if (project) {
+        setProject({ ...project, budget: newBudgetNum });
+      }
+      setShowBudgetModal(false);
+    } else {
+      alert(`Error updating contract budget: ${error.message}`);
+    }
+
+    setSavingBudget(false);
   };
 
   if (loading) {
@@ -227,14 +258,29 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
 
         {/* Quick Stats Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="px-4 py-2">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-              Contract Budget
-            </span>
+          {/* Contract Budget with Edit Button */}
+          <div className="px-4 py-2 relative group">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Contract Budget
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setContractBudgetInput(project.budget?.toString() || "500000");
+                  setShowBudgetModal(true);
+                }}
+                title="Edit Contract Budget"
+                className="p-1 text-slate-400 hover:text-amber-500 rounded cursor-pointer"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <span className="text-lg font-bold text-slate-900 dark:text-white mt-0.5 block">
               {formatCurrency(project.budget)}
             </span>
           </div>
+
           <div className="px-4 py-2">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Spent to Date
@@ -487,6 +533,77 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           </div>
         </div>
       </div>
+
+      {/* Edit Contract Budget Modal */}
+      {showBudgetModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Edit Contract Budget</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Update approved budget cap for {project?.name || "Project"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBudgetModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveContractBudget} className="space-y-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Approved Contract Budget (₱ PHP)
+                </label>
+                <div className="mt-1 relative">
+                  <span className="absolute left-3 top-2.5 font-bold text-slate-500 text-sm">₱</span>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="1000"
+                    value={contractBudgetInput}
+                    onChange={(e) => setContractBudgetInput(e.target.value)}
+                    placeholder="500000"
+                    className="w-full pl-8 pr-4 py-2.5 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-base font-bold font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  Current budget: {formatCurrency(project?.budget || 0)}
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowBudgetModal(false)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBudget}
+                  className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm cursor-pointer flex items-center gap-2"
+                >
+                  {savingBudget ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Updating Budget...</span>
+                    </>
+                  ) : (
+                    <span>Save Contract Budget</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
