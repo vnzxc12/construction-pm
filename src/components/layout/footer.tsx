@@ -2,13 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { ShieldCheck, Server, HelpCircle, FileCode } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { BRAND_CONFIG } from "@/lib/brand.config";
 
 export function Footer({ className = "" }: { className?: string }) {
   return (
     <footer
-      className={`w-full mt-auto border-t border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm py-5 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 dark:text-slate-400 transition-colors ${className}`}
+      className={`static w-full border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-5 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 dark:text-slate-400 transition-colors ${className}`}
     >
       <div className="max-w-7xl w-full mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Left: Copyright & System Name */}
@@ -25,7 +25,7 @@ export function Footer({ className = "" }: { className?: string }) {
         {/* Center: Highlighted Brand Product Tag */}
         <div className="flex items-center gap-1.5 text-center">
           <span className="text-slate-600 dark:text-slate-400">A Product by</span>
-          <span className="px-2 py-0.5 rounded-md font-extrabold tracking-wide bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400 border border-amber-500/20 shadow-xs">
+          <span className="px-2.5 py-0.5 rounded-md font-extrabold tracking-wide bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400 border border-amber-500/20 shadow-xs">
             VCS Technology
           </span>
         </div>
