@@ -11,6 +11,7 @@ import {
   HardHat,
   Loader2,
   X,
+  AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project, ProjectStatus } from "@/types/database";
@@ -24,6 +25,7 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Form State for new project
   const [newCode, setNewCode] = useState("MBS-2026-002");
@@ -36,7 +38,7 @@ export default function ProjectsPage() {
   const fetchProjects = async () => {
     setLoading(true);
     const supabase = createClient();
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("projects")
       .select("*")
       .order("created_at", { ascending: false });
@@ -55,55 +57,64 @@ export default function ProjectsPage() {
     e.preventDefault();
     if (!newName) return;
     setCreating(true);
+    setErrorMessage(null);
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (user) {
-      await supabase.from("profiles").upsert(
-        {
-          id: user.id,
-          email: user.email || "user@test.com",
-          full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Admin",
-          role: "admin",
-        },
-        { onConflict: "id" }
-      );
+      if (user) {
+        await supabase.from("profiles").upsert(
+          {
+            id: user.id,
+            email: user.email || "admin@mbsdesign.com",
+            full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Admin",
+            role: "admin",
+          },
+          { onConflict: "id" }
+        );
+      }
+
+      const newProjectPayload: any = {
+        code: newCode,
+        name: newName,
+        description: "Active renovation and construction project.",
+        address: newAddress || "Site Location",
+        city: newCity || "Batangas",
+        client_name: newClient || "Client",
+        status: "in_progress" as ProjectStatus,
+        budget: parseFloat(newBudget) || 500000,
+        spent: 0,
+        start_date: new Date().toISOString().split("T")[0],
+        target_completion_date: "2027-12-31",
+        cover_image_url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&auto=format&fit=crop&q=80",
+      };
+
+      if (user?.id) {
+        newProjectPayload.created_by = user.id;
+      }
+
+      const { data, error } = await supabase
+        .from("projects")
+        .insert(newProjectPayload)
+        .select()
+        .single();
+
+      if (data) {
+        setProjectsList([data, ...projectsList]);
+        setShowModal(false);
+        setNewName("");
+        setNewClient("");
+        setNewAddress("");
+        setErrorMessage(null);
+      } else if (error) {
+        setErrorMessage(error.message);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to create project.");
+    } finally {
+      setCreating(false);
     }
-
-    const newProjectPayload = {
-      code: newCode,
-      name: newName,
-      description: "Active renovation and construction project.",
-      address: newAddress || "Site Location",
-      city: newCity || "Batangas",
-      client_name: newClient || "Client",
-      status: "in_progress" as ProjectStatus,
-      budget: parseFloat(newBudget) || 500000,
-      spent: 0,
-      start_date: new Date().toISOString().split("T")[0],
-      target_completion_date: "2027-12-31",
-      cover_image_url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&auto=format&fit=crop&q=80",
-      created_by: user?.id || null,
-    };
-
-    const { data, error } = await supabase
-      .from("projects")
-      .insert(newProjectPayload)
-      .select()
-      .single();
-
-    if (data) {
-      setProjectsList([data, ...projectsList]);
-      setShowModal(false);
-      setNewName("");
-      setNewClient("");
-      setNewAddress("");
-    } else if (error) {
-      alert(`Error creating project: ${error.message}`);
-    }
-
-    setCreating(false);
   };
 
   const filteredProjects = projectsList.filter((p) => {
@@ -130,7 +141,10 @@ export default function ProjectsPage() {
 
         <button
           type="button"
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setErrorMessage(null);
+            setShowModal(true);
+          }}
           className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-sm font-bold shadow-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" />
@@ -187,7 +201,10 @@ export default function ProjectsPage() {
           </p>
           <button
             type="button"
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setErrorMessage(null);
+              setShowModal(true);
+            }}
             className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs shadow inline-flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -284,7 +301,17 @@ export default function ProjectsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateProject} className="space-y-4 mt-5">
+            {errorMessage && (
+              <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Database Permission Notice:</span>
+                  <span>{errorMessage}</span>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateProject} className="space-y-4 mt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Project Code
@@ -382,7 +409,14 @@ export default function ProjectsPage() {
                   disabled={creating}
                   className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm cursor-pointer flex items-center gap-2"
                 >
-                  {creating ? "Writing to Database..." : "Create Project"}
+                  {creating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Writing to Database...</span>
+                    </>
+                  ) : (
+                    <span>Create Project</span>
+                  )}
                 </button>
               </div>
             </form>
