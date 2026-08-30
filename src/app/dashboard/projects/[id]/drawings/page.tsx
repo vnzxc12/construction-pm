@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   File,
   X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DrawingDocument, DocCategory, Project } from "@/types/database";
@@ -74,6 +76,28 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
     }
   };
 
+  const handleDeleteDoc = async (doc: DrawingDocument) => {
+    if (!confirm(`Are you sure you want to delete "${doc.title}"?`)) return;
+    try {
+      const supabase = createClient();
+      if (doc.storage_path) {
+        await supabase.storage.from("blueprints").remove([doc.storage_path]);
+      }
+      const { error } = await supabase
+        .from("drawings_documents")
+        .delete()
+        .eq("id", doc.id);
+
+      if (error) {
+        alert(`Error deleting document: ${error.message}`);
+        return;
+      }
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+    } catch (err: any) {
+      alert(`Delete failed: ${err?.message || "Unknown error"}`);
+    }
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!docTitle) {
@@ -95,7 +119,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
       const sanitizedName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const storagePath = `${params.id}/${Date.now()}_${sanitizedName}`;
 
-      // 1. Real Upload to Supabase Storage bucket 'blueprints'
+      // 1. Upload to Supabase Storage bucket 'blueprints'
       const { data: storageData, error: storageError } = await supabase.storage
         .from("blueprints")
         .upload(storagePath, selectedFile, {
@@ -105,7 +129,17 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
 
       if (storageError) {
         console.error("Supabase Storage error:", storageError);
-        alert(`Storage Error: ${storageError.message}`);
+        if (
+          storageError.message.includes("violates row-level security policy") ||
+          storageError.message.includes("row-level security")
+        ) {
+          alert(
+            `Storage RLS Error: Supabase Row-Level Security blocked this upload.\n\n` +
+            `Fix: Please run the SQL script in 'supabase/storage_and_drawings_fix.sql' inside your Supabase SQL Editor to grant storage bucket upload and update permissions.`
+          );
+        } else {
+          alert(`Storage Error: ${storageError.message}`);
+        }
         setUploading(false);
         return;
       }
@@ -142,7 +176,14 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
         setSheetNumber("A-101");
         setSelectedFile(null);
       } else if (insertError) {
-        alert(`Database Error: ${insertError.message}`);
+        if (insertError.message.includes("violates row-level security policy")) {
+          alert(
+            `Database RLS Error on drawings_documents table.\n\n` +
+            `Fix: Run 'supabase/storage_and_drawings_fix.sql' in your Supabase SQL Editor.`
+          );
+        } else {
+          alert(`Database Error: ${insertError.message}`);
+        }
       }
     } catch (err: any) {
       alert(`Upload failed: ${err?.message || "Unknown error"}`);
@@ -313,6 +354,14 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
                       <Eye className="w-3.5 h-3.5 text-amber-400" />
                       <span>Open Plan</span>
                     </a>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDoc(doc)}
+                      title="Delete Plan"
+                      className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>

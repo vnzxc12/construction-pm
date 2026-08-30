@@ -437,19 +437,42 @@ CREATE TRIGGER on_auth_user_created
 -- ------------------------------------------------------------------------------
 -- 5. STORAGE BUCKETS SETUP (Run in Supabase SQL Editor)
 -- ------------------------------------------------------------------------------
-INSERT INTO storage.buckets (id, name, public) 
+INSERT INTO storage.buckets (id, name, public, file_size_limit) 
 VALUES 
-  ('project-documents', 'project-documents', true),
-  ('blueprints', 'blueprints', true),
-  ('site-photos', 'site-photos', true),
-  ('punch-photos', 'punch-photos', true)
-ON CONFLICT (id) DO NOTHING;
+  ('project-documents', 'project-documents', true, 104857600),
+  ('blueprints', 'blueprints', true, 104857600),
+  ('site-photos', 'site-photos', true, 52428800),
+  ('punch-photos', 'punch-photos', true, 52428800)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = EXCLUDED.file_size_limit;
 
--- Storage RLS: Allow authenticated users to upload and view
-CREATE POLICY "Authenticated users can upload objects"
-  ON storage.objects FOR INSERT TO authenticated
+-- Storage RLS: Allow authenticated, anon & public access for project storage
+DROP POLICY IF EXISTS "Authenticated users can upload objects" ON storage.objects;
+DROP POLICY IF EXISTS "Public read for project storage" ON storage.objects;
+DROP POLICY IF EXISTS "storage_objects_select_policy" ON storage.objects;
+DROP POLICY IF EXISTS "storage_objects_insert_policy" ON storage.objects;
+DROP POLICY IF EXISTS "storage_objects_update_policy" ON storage.objects;
+DROP POLICY IF EXISTS "storage_objects_delete_policy" ON storage.objects;
+
+CREATE POLICY "storage_objects_select_policy"
+  ON storage.objects FOR SELECT
+  TO authenticated, anon, public
+  USING (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
+
+CREATE POLICY "storage_objects_insert_policy"
+  ON storage.objects FOR INSERT
+  TO authenticated, anon, public
   WITH CHECK (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
 
-CREATE POLICY "Public read for project storage"
-  ON storage.objects FOR SELECT TO authenticated
+CREATE POLICY "storage_objects_update_policy"
+  ON storage.objects FOR UPDATE
+  TO authenticated, anon, public
+  USING (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'))
+  WITH CHECK (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
+
+CREATE POLICY "storage_objects_delete_policy"
+  ON storage.objects FOR DELETE
+  TO authenticated, anon, public
   USING (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
+

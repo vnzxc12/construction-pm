@@ -79,7 +79,16 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        alert(`Storage upload error: ${uploadError.message}`);
+        if (
+          uploadError.message.includes("violates row-level security policy") ||
+          uploadError.message.includes("row-level security")
+        ) {
+          alert(
+            `Storage RLS Error: Row-level security policy prevented photo upload.\n\nPlease execute 'supabase/storage_and_drawings_fix.sql' in your Supabase SQL Editor.`
+          );
+        } else {
+          alert(`Storage upload error: ${uploadError.message}`);
+        }
         setUploadingCover(false);
         return;
       }
