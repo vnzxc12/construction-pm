@@ -1,6 +1,7 @@
 import React from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 
 export default function DashboardLayout({
   children,
@@ -12,18 +13,11 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <Header />
-        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 flex-grow p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
-        {/* Footer */}
-        <footer className="mt-auto py-6 px-4 text-center border-t border-slate-200 dark:border-slate-800 text-xs space-y-1 bg-white/50 dark:bg-slate-900/50 backdrop-blur">
-          <p className="font-bold text-slate-800 dark:text-slate-200">
-            MBS Studio Project Management System
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            A Product by VCS Technology
-          </p>
-        </footer>
+        {/* Professional Enterprise Footer */}
+        <Footer />
       </div>
     </div>
   );
