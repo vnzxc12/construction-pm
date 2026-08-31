@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { RFI, ChangeOrder, Project, RFIStatus } from "@/types/database";
@@ -100,14 +101,14 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
+            <span className="text-xs font-mono font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-500/30">
               {project?.code || "PRJ"}
             </span>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               RFIs & Change Orders
             </h1>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Design clarifications and architect inquiries saved in Supabase.
           </p>
         </div>
@@ -123,14 +124,14 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex border-b border-slate-200 gap-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
         <button
           type="button"
           onClick={() => setActiveTab("rfis")}
           className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
             activeTab === "rfis"
-              ? "border-amber-500 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-amber-500 text-slate-900 dark:text-white"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
           }`}
         >
           <HelpCircle className="w-4 h-4 text-amber-500" />
@@ -141,8 +142,8 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
           onClick={() => setActiveTab("change_orders")}
           className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
             activeTab === "change_orders"
-              ? "border-amber-500 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-amber-500 text-slate-900 dark:text-white"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
           }`}
         >
           <Coins className="w-4 h-4 text-emerald-500" />
@@ -152,16 +153,16 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
 
       {/* RFIs View */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center text-slate-500 space-y-3">
+        <div className="py-20 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
           <span className="text-sm font-medium">Loading RFIs from Database...</span>
         </div>
       ) : activeTab === "rfis" ? (
         rfis.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
-            <HelpCircle className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-            <h3 className="text-base font-bold text-slate-900">No RFIs Submitted Yet</h3>
-            <p className="text-xs text-slate-500 mt-1 mb-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-12 text-center max-w-lg mx-auto">
+            <HelpCircle className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">No RFIs Submitted Yet</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-6">
               Need design or engineering clarification? Submit an RFI below.
             </p>
             <button
@@ -178,14 +179,14 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
             {rfis.map((rfi) => (
               <div
                 key={rfi.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4 transition-colors"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs font-bold bg-slate-900 text-white px-2.5 py-1 rounded">
+                    <span className="font-mono text-xs font-bold bg-slate-900 dark:bg-slate-800 text-white px-2.5 py-1 rounded border border-slate-700">
                       RFI #{rfi.rfi_number}
                     </span>
-                    <h3 className="font-bold text-slate-900 text-base">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">
                       {rfi.subject}
                     </h3>
                   </div>
@@ -194,32 +195,32 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
 
                 <div className="space-y-3 text-xs">
                   <div>
-                    <span className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-1">
                       Inquiry / Discrepancy:
                     </span>
-                    <p className="text-slate-800 bg-slate-50 p-3.5 rounded-xl border border-slate-200/70 leading-relaxed text-sm">
+                    <p className="text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/70 p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-700 leading-relaxed text-sm">
                       {rfi.question}
                     </p>
                   </div>
 
                   {rfi.suggested_solution && (
                     <div>
-                      <span className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                      <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-1">
                         Suggested Field Solution:
                       </span>
-                      <p className="text-slate-600 bg-amber-50/50 p-3 rounded-lg border border-amber-200/50">
+                      <p className="text-slate-700 dark:text-slate-300 bg-amber-50/50 dark:bg-amber-500/10 p-3 rounded-lg border border-amber-200/50 dark:border-amber-500/20">
                         {rfi.suggested_solution}
                       </p>
                     </div>
                   )}
 
                   {rfi.official_answer && (
-                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950">
-                      <div className="flex items-center gap-1.5 font-bold text-emerald-900 mb-1">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-900/50 text-emerald-950 dark:text-emerald-300">
+                      <div className="flex items-center gap-1.5 font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         <span>Official Engineer Response:</span>
                       </div>
-                      <p className="text-xs leading-relaxed text-slate-800 font-medium">
+                      <p className="text-xs leading-relaxed text-slate-800 dark:text-slate-200 font-medium">
                         {rfi.official_answer}
                       </p>
                     </div>
@@ -230,10 +231,10 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
           </div>
         )
       ) : (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto">
-          <Coins className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-          <h3 className="text-base font-bold text-slate-900">No Change Orders on File</h3>
-          <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-12 text-center max-w-lg mx-auto">
+          <Coins className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">No Change Orders on File</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Approved scope modifications will appear here.
           </p>
         </div>
@@ -242,15 +243,26 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
       {/* New RFI Modal */}
       {showRfiModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">Submit Official RFI</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Engineering clarification for {project?.name || "Project"}
-            </p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Submit Official RFI</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Engineering clarification for {project?.name || "Project"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRfiModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleCreateRFI} className="space-y-4 mt-5">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Subject Line
                 </label>
                 <input
@@ -259,12 +271,12 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="e.g. Clash between Plumbing Line and Structural Beam"
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Question / Clarification Details
                 </label>
                 <textarea
@@ -273,12 +285,12 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Describe discrepancy and specific question for engineer..."
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Proposed Solution (Optional)
                 </label>
                 <input
@@ -286,15 +298,15 @@ export default function RFIsPage({ params }: { params: { id: string } }) {
                   value={solution}
                   onChange={(e) => setSolution(e.target.value)}
                   placeholder="Field recommendation..."
-                  className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowRfiModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
