@@ -12,6 +12,7 @@ import {
   Loader2,
   X,
   AlertCircle,
+  Edit2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project, ProjectStatus } from "@/types/database";
@@ -34,6 +35,18 @@ export default function ProjectsPage() {
   const [newBudget, setNewBudget] = useState("500000");
   const [newAddress, setNewAddress] = useState("");
   const [newCity, setNewCity] = useState("Batangas");
+
+  // Form State for editing project
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editProjectId, setEditProjectId] = useState<string | null>(null);
+  const [editCode, setEditCode] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editClient, setEditClient] = useState("");
+  const [editBudget, setEditBudget] = useState("500000");
+  const [editAddress, setEditAddress] = useState("");
+  const [editCity, setEditCity] = useState("Batangas");
+  const [editStatus, setEditStatus] = useState<ProjectStatus>("in_progress");
+  const [updating, setUpdating] = useState(false);
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -114,6 +127,58 @@ export default function ProjectsPage() {
       setErrorMessage(err?.message || "Failed to create project.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEditModal = (p: Project) => {
+    setEditProjectId(p.id);
+    setEditCode(p.code || "");
+    setEditName(p.name || "");
+    setEditClient(p.client_name || "");
+    setEditBudget(p.budget?.toString() || "500000");
+    setEditAddress(p.address || "");
+    setEditCity(p.city || "Batangas");
+    setEditStatus(p.status || "in_progress");
+    setErrorMessage(null);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim() || !editProjectId) return;
+    setUpdating(true);
+    setErrorMessage(null);
+
+    try {
+      const supabase = createClient();
+      const payload = {
+        name: editName.trim(),
+        code: editCode.trim(),
+        client_name: editClient.trim(),
+        address: editAddress.trim(),
+        city: editCity.trim(),
+        budget: parseFloat(editBudget) || 500000,
+        status: editStatus,
+      };
+
+      const { data, error } = await supabase
+        .from("projects")
+        .update(payload)
+        .eq("id", editProjectId)
+        .select()
+        .single();
+
+      if (data) {
+        setProjectsList(projectsList.map((p) => (p.id === editProjectId ? data : p)));
+        setShowEditModal(false);
+        setEditProjectId(null);
+      } else if (error) {
+        setErrorMessage(error.message);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to update project.");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -226,7 +291,15 @@ export default function ProjectsPage() {
                     alt={project.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(project)}
+                      title="Edit Project Details"
+                      className="p-1 bg-slate-950/70 hover:bg-slate-900 text-white border border-slate-700/80 rounded backdrop-blur transition-colors cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
                     <StatusBadge status={project.status} />
                   </div>
                   <div className="absolute bottom-2 left-3 bg-slate-950/80 px-2.5 py-0.5 rounded text-white text-xs font-mono font-bold">
@@ -236,9 +309,19 @@ export default function ProjectsPage() {
 
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                      {project.name}
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                        {project.name}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(project)}
+                        title="Edit Project"
+                        className="text-slate-400 hover:text-amber-500 p-1 rounded transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       <MapPin className="w-3.5 h-3.5 text-slate-400" />
                       <span>{project.address}, {project.city}</span>
@@ -416,6 +499,167 @@ export default function ProjectsPage() {
                     </>
                   ) : (
                     <span>Create Project</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Edit Project Details</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Update project title, client name, or budget.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {errorMessage && (
+              <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Notice:</span>
+                  <span>{errorMessage}</span>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateProject} className="space-y-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="e.g. Master Bedroom Renovation"
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Project Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editCode}
+                    onChange={(e) => setEditCode(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Status
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as ProjectStatus)}
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                  >
+                    <option value="in_progress">In Progress</option>
+                    <option value="planning">Planning</option>
+                    <option value="completed">Completed</option>
+                    <option value="on_hold">On Hold</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Client Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editClient}
+                    onChange={(e) => setEditClient(e.target.value)}
+                    placeholder="e.g. Billy Serrano"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Budget (₱)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={editBudget}
+                    onChange={(e) => setEditBudget(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Job Site Address
+                  </label>
+                  <input
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    placeholder="e.g. Lalayat San Jose"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={editCity}
+                    onChange={(e) => setEditCity(e.target.value)}
+                    placeholder="e.g. Batangas"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm cursor-pointer flex items-center gap-2"
+                >
+                  {updating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : (
+                    <span>Save Project</span>
                   )}
                 </button>
               </div>

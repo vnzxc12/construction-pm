@@ -42,6 +42,17 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
   const [contractBudgetInput, setContractBudgetInput] = useState("500000");
   const [savingBudget, setSavingBudget] = useState(false);
 
+  // Edit Project Details Modal State
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editCode, setEditCode] = useState("");
+  const [editClient, setEditClient] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editTargetDate, setEditTargetDate] = useState("2027-12-31");
+  const [savingProject, setSavingProject] = useState(false);
+
   useEffect(() => {
     async function loadProjectDetails() {
       setLoading(true);
@@ -58,6 +69,13 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
       if (projRes.data) {
         setProject(projRes.data);
         setContractBudgetInput(projRes.data.budget?.toString() || "500000");
+        setEditName(projRes.data.name || "");
+        setEditCode(projRes.data.code || "");
+        setEditClient(projRes.data.client_name || "");
+        setEditAddress(projRes.data.address || "");
+        setEditCity(projRes.data.city || "");
+        setEditDesc(projRes.data.description || "");
+        setEditTargetDate(projRes.data.target_completion_date || "2027-12-31");
       }
       if (tasksRes.data) setProjectTasks(tasksRes.data);
       if (logsRes.data) {
@@ -75,6 +93,52 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
 
     loadProjectDetails();
   }, [params.id]);
+
+  const openProjectEditModal = () => {
+    if (!project) return;
+    setEditName(project.name || "");
+    setEditCode(project.code || "");
+    setEditClient(project.client_name || "");
+    setEditAddress(project.address || "");
+    setEditCity(project.city || "");
+    setEditDesc(project.description || "");
+    setEditTargetDate(project.target_completion_date || "2027-12-31");
+    setShowEditProjectModal(true);
+  };
+
+  const handleSaveProjectDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim() || !project) return;
+    setSavingProject(true);
+
+    const supabase = createClient();
+    const payload = {
+      name: editName.trim(),
+      code: editCode.trim() || project.code,
+      client_name: editClient.trim() || project.client_name,
+      address: editAddress.trim() || project.address,
+      city: editCity.trim() || project.city,
+      description: editDesc.trim(),
+      target_completion_date: editTargetDate,
+    };
+
+    const { error } = await supabase
+      .from("projects")
+      .update(payload)
+      .eq("id", project.id);
+
+    if (!error) {
+      setProject({
+        ...project,
+        ...payload,
+      });
+      setShowEditProjectModal(false);
+    } else {
+      alert(`Error updating project: ${error.message}`);
+    }
+
+    setSavingProject(false);
+  };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -191,8 +255,17 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
           
-          {/* Change Cover Photo Button */}
-          <div className="absolute top-4 right-4 z-10">
+          {/* Top Actions: Edit Details & Cover Photo */}
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openProjectEditModal}
+              className="px-3 py-1.5 bg-slate-950/80 hover:bg-slate-900 text-white border border-slate-700/80 rounded-lg text-xs font-semibold backdrop-blur shadow flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Edit Project Details</span>
+            </button>
+
             <input
               type="file"
               ref={fileInputRef}
@@ -204,7 +277,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingCover}
-              className="px-3 py-1.5 bg-slate-950/70 hover:bg-slate-900 text-white border border-slate-700/80 rounded-lg text-xs font-semibold backdrop-blur shadow flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3 py-1.5 bg-slate-950/80 hover:bg-slate-900 text-white border border-slate-700/80 rounded-lg text-xs font-semibold backdrop-blur shadow flex items-center gap-1.5 transition-all cursor-pointer"
             >
               {uploadingCover ? (
                 <>
@@ -214,7 +287,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
               ) : (
                 <>
                   <Camera className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Change Cover Photo</span>
+                  <span>Change Cover</span>
                 </>
               )}
             </button>
@@ -228,12 +301,24 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
                 </span>
                 <StatusBadge status={project.status} />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                {project.name}
-              </h1>
+              <div className="flex items-center gap-2 group">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                  {project.name}
+                </h1>
+                <button
+                  type="button"
+                  onClick={openProjectEditModal}
+                  title="Edit Project Name"
+                  className="p-1 text-slate-300 hover:text-amber-400 opacity-70 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              </div>
               <div className="flex items-center gap-2 text-slate-300 text-xs mt-1">
                 <MapPin className="w-3.5 h-3.5 text-amber-400" />
                 <span>{project.address}, {project.city}</span>
+                <span>&bull;</span>
+                <span className="text-amber-300 font-medium">Client: {project.client_name}</span>
               </div>
             </div>
 
@@ -533,6 +618,151 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           </div>
         </div>
       </div>
+
+      {/* Edit Project Details & Name Modal */}
+      {showEditProjectModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Edit Project Details</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Update project title, client, code, or job site location
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditProjectModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProjectDetails} className="space-y-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="e.g. Lalayat Kitchen Renovation"
+                  className="mt-1 w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Project Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editCode}
+                    onChange={(e) => setEditCode(e.target.value)}
+                    placeholder="MBS-2026-001"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Client Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editClient}
+                    onChange={(e) => setEditClient(e.target.value)}
+                    placeholder="e.g. Billy Serrano"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Address / Site Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    placeholder="e.g. Lalayat San Jose"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={editCity}
+                    onChange={(e) => setEditCity(e.target.value)}
+                    placeholder="Batangas"
+                    className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Scope of Work / Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  placeholder="Detailed description of architectural renovation and construction activities..."
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Target Completion Date
+                </label>
+                <input
+                  type="date"
+                  value={editTargetDate}
+                  onChange={(e) => setEditTargetDate(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProjectModal(false)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProject}
+                  className="px-4 py-2 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg shadow-sm cursor-pointer flex items-center gap-2"
+                >
+                  {savingProject ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : (
+                    <span>Save Project Details</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit Contract Budget Modal */}
       {showBudgetModal && (
