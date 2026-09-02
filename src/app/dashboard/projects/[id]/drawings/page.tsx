@@ -17,10 +17,13 @@ import {
   X,
   Trash2,
   AlertTriangle,
+  Lock,
+  ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DrawingDocument, DocCategory, Project } from "@/types/database";
 import { formatFileSize, formatDate } from "@/lib/utils";
+import { getSignedFileUrl, batchGetSignedUrls } from "@/lib/storage";
 
 const CATEGORIES: { id: string; label: string }[] = [
   { id: "all", label: "All Plans & Specs" },
@@ -33,11 +36,14 @@ const CATEGORIES: { id: string; label: string }[] = [
 export default function DrawingsPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [documents, setDocuments] = useState<DrawingDocument[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // File Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -56,7 +62,24 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
     ]);
 
     if (projRes.data) setProject(projRes.data);
-    if (docsRes.data) setDocuments(docsRes.data);
+    
+    if (docsRes.data) {
+      const docs = docsRes.data as DrawingDocument[];
+      setDocuments(docs);
+
+      // Generate 3600-second signed thumbnail URLs for images in private bucket
+      const imageDocs = docs.filter((d) => 
+        (d.storage_path && d.storage_path.match(/\.(jpeg|jpg|png|webp|gif)/i)) ||
+        (d.file_url && d.file_url.match(/\.(jpeg|jpg|png|webp|gif)/i))
+      );
+
+      if (imageDocs.length > 0) {
+        const pathsToSign = imageDocs.map((d) => d.storage_path || d.file_url);
+        const signedMap = await batchGetSignedUrls(supabase, "blueprints", pathsToSign, 3600);
+        setPreviewUrls(signedMap);
+      }
+    }
+
     setLoading(false);
   };
 
@@ -73,6 +96,30 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
         const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
         setDocTitle(nameWithoutExt);
       }
+    }
+  };
+
+  const handleOpenPlan = async (doc: DrawingDocument) => {
+    setOpeningDocId(doc.id);
+    setActionError(null);
+
+    try {
+      const supabase = createClient();
+      const targetPath = doc.storage_path || doc.file_url;
+      
+      // On-demand signed URL generation (300 seconds expiration)
+      const signedUrl = await getSignedFileUrl(supabase, "blueprints", targetPath, 300);
+
+      if (!signedUrl) {
+        setActionError(`Failed to generate a secure preview link for "${doc.title}". Please verify your Supabase permissions.`);
+        return;
+      }
+
+      window.open(signedUrl, "_blank", "noopener,noreferrer");
+    } catch (err: any) {
+      setActionError(`Error opening plan: ${err?.message || "Unknown error"}`);
+    } finally {
+      setOpeningDocId(null);
     }
   };
 
@@ -115,11 +162,11 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Clean file path in storage bucket
+      // Clean file path in private storage bucket
       const sanitizedName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const storagePath = `${params.id}/${Date.now()}_${sanitizedName}`;
 
-      // 1. Upload to Supabase Storage bucket 'blueprints'
+      // 1. Upload to private Supabase Storage bucket 'blueprints'
       const { data: storageData, error: storageError } = await supabase.storage
         .from("blueprints")
         .upload(storagePath, selectedFile, {
@@ -135,7 +182,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
         ) {
           alert(
             `Storage RLS Error: Supabase Row-Level Security blocked this upload.\n\n` +
-            `Fix: Please run the SQL script in 'supabase/storage_and_drawings_fix.sql' inside your Supabase SQL Editor to grant storage bucket upload and update permissions.`
+            `Fix: Please run the SQL script in 'supabase/storage_and_drawings_fix.sql' inside your Supabase SQL Editor to grant authenticated storage access.`
           );
         } else {
           alert(`Storage Error: ${storageError.message}`);
@@ -144,10 +191,12 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
         return;
       }
 
-      // 2. Get Public Download / Preview URL
-      const { data: { publicUrl } } = supabase.storage
+      // 2. Generate initial signed URL (3600s) for display
+      const { data: signedData } = await supabase.storage
         .from("blueprints")
-        .getPublicUrl(storagePath);
+        .createSignedUrl(storagePath, 3600);
+
+      const previewUrl = signedData?.signedUrl || "";
 
       // 3. Insert record into drawings_documents table
       const newDocPayload = {
@@ -156,10 +205,10 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
         sheet_number: sheetNumber || "PLAN-01",
         category: docCategory,
         version: 1,
-        file_url: publicUrl,
+        file_url: previewUrl,
         file_size_bytes: selectedFile.size,
         storage_path: storagePath,
-        description: `Uploaded ${selectedFile.name} to Supabase Storage.`,
+        description: `Uploaded ${selectedFile.name} to private blueprints bucket.`,
         uploaded_by: user?.id || null,
       };
 
@@ -171,6 +220,9 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
 
       if (insertedDoc) {
         setDocuments([insertedDoc, ...documents]);
+        if (previewUrl) {
+          setPreviewUrls((prev) => ({ ...prev, [storagePath]: previewUrl, [insertedDoc.id]: previewUrl }));
+        }
         setShowUploadModal(false);
         setDocTitle("");
         setSheetNumber("A-101");
@@ -214,7 +266,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
             </h1>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Upload and view PDF, JPEG, and PNG construction plans backed by Supabase Storage.
+            Secure private cloud vault for construction plans, CAD blueprints, and contract specs with signed URL access.
           </p>
         </div>
 
@@ -227,6 +279,23 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
           <span>Upload Plan / Drawing</span>
         </button>
       </div>
+
+      {/* Action Error Alert */}
+      {actionError && (
+        <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-800 dark:text-rose-300 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="text-rose-600 dark:text-rose-400 hover:underline font-semibold ml-4"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
@@ -262,24 +331,32 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
       {/* Storage Information Banner */}
       <div className="bg-slate-900 dark:bg-slate-900/90 text-slate-200 p-4 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <HardDrive className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <Lock className="w-4 h-4" />
           </div>
           <div>
-            <span className="font-bold text-white block">Supabase Storage Bucket: `blueprints`</span>
-            <span className="text-slate-400">Direct cloud upload for PDF, PNG, JPEG &bull; CDN fast delivery</span>
+            <span className="font-bold text-white block flex items-center gap-2">
+              <span>Supabase Storage: `blueprints` (Private Bucket)</span>
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-mono">
+                Authenticated Signed URLs
+              </span>
+            </span>
+            <span className="text-slate-400">
+              Files protected by Row-Level Security &bull; Expiring tokens (300s on-demand &bull; 3600s previews)
+            </span>
           </div>
         </div>
-        <span className="text-emerald-400 font-semibold hidden sm:inline-block">
-          Active
-        </span>
+        <div className="hidden sm:flex items-center gap-1.5 text-emerald-400 font-semibold">
+          <ShieldCheck className="w-4 h-4" />
+          <span>Encrypted Access</span>
+        </div>
       </div>
 
       {/* Document Cards Grid */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-          <span className="text-sm font-medium">Loading Plans from Supabase Storage...</span>
+          <span className="text-sm font-medium">Loading Plans & Resolving Secure Signed URLs...</span>
         </div>
       ) : filteredDocs.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-12 text-center max-w-lg mx-auto">
@@ -300,7 +377,13 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredDocs.map((doc) => {
-            const isImage = doc.file_url?.match(/\.(jpeg|jpg|png|webp|gif)/i);
+            const isImage = 
+              (doc.storage_path && doc.storage_path.match(/\.(jpeg|jpg|png|webp|gif)/i)) ||
+              (doc.file_url && doc.file_url.match(/\.(jpeg|jpg|png|webp|gif)/i));
+
+            const resolvedPreview = previewUrls[doc.storage_path] || previewUrls[doc.id] || previewUrls[doc.file_url] || doc.file_url;
+            const isOpening = openingDocId === doc.id;
+
             return (
               <div
                 key={doc.id}
@@ -310,8 +393,12 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
                   <div className="flex items-start gap-3">
                     {isImage ? (
                       <img
-                        src={doc.file_url}
+                        src={resolvedPreview}
                         alt={doc.title}
+                        onError={(e) => {
+                          // Fallback to placeholder on broken signed url
+                          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=100&auto=format&fit=crop&q=60";
+                        }}
                         className="w-12 h-12 rounded-lg object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0"
                       />
                     ) : (
@@ -345,15 +432,25 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
                   </span>
 
                   <div className="flex items-center gap-2">
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 border border-slate-700/80 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPlan(doc)}
+                      disabled={isOpening}
+                      className="px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 border border-slate-700/80 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
+                      title="Generate authenticated temporary link (300s)"
                     >
-                      <Eye className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Open Plan</span>
-                    </a>
+                      {isOpening ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Open Plan</span>
+                        </>
+                      )}
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteDoc(doc)}
@@ -378,7 +475,7 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">Upload Plan / Drawing</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Direct upload to Supabase Storage for {project?.name || "Project"}
+                  Direct upload to private storage bucket for {project?.name || "Project"}
                 </p>
               </div>
               <button
@@ -499,10 +596,10 @@ export default function DrawingsPage({ params }: { params: { id: string } }) {
                   {uploading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Uploading to Supabase...</span>
+                      <span>Uploading to Secure Vault...</span>
                     </>
                   ) : (
-                    <span>Upload & Save Plan</span>
+                    <span>Upload & Secure Plan</span>
                   )}
                 </button>
               </div>

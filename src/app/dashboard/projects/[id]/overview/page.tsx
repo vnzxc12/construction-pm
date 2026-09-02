@@ -25,6 +25,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Project, Task, DailyLog, Profile, DailyLogCrew, ProjectExpense } from "@/types/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { StatusBadge, PriorityBadge } from "@/components/ui/status-badge";
+import { getSignedFileUrl } from "@/lib/storage";
 
 export default function ProjectOverviewPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
@@ -35,6 +36,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
   const [expenses, setExpenses] = useState<ProjectExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [coverSignedUrl, setCoverSignedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit Contract Budget Modal State
@@ -76,6 +78,14 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         setEditCity(projRes.data.city || "");
         setEditDesc(projRes.data.description || "");
         setEditTargetDate(projRes.data.target_completion_date || "2027-12-31");
+
+        // Resolve authenticated signed URL for private bucket 'site-photos'
+        if (projRes.data.cover_image_url) {
+          getSignedFileUrl(supabase, "site-photos", projRes.data.cover_image_url, 3600)
+            .then((url) => {
+              if (url) setCoverSignedUrl(url);
+            });
+        }
       }
       if (tasksRes.data) setProjectTasks(tasksRes.data);
       if (logsRes.data) {
@@ -160,17 +170,17 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
         return;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("site-photos")
-        .getPublicUrl(filePath);
+      // 2. Generate signed preview URL (3600s) for private bucket
+      const signedUrl = await getSignedFileUrl(supabase, "site-photos", filePath, 3600);
 
       const { error: updateError } = await supabase
         .from("projects")
-        .update({ cover_image_url: publicUrl })
+        .update({ cover_image_url: filePath })
         .eq("id", project.id);
 
       if (!updateError) {
-        setProject({ ...project, cover_image_url: publicUrl });
+        setProject({ ...project, cover_image_url: filePath });
+        if (signedUrl) setCoverSignedUrl(signedUrl);
       }
     } catch (err: any) {
       alert(`Error updating cover photo: ${err?.message}`);
@@ -249,8 +259,16 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative transition-colors">
         <div className="h-48 relative bg-slate-900">
           <img
-            src={project.cover_image_url || "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80"}
+            src={
+              coverSignedUrl ||
+              (project.cover_image_url && !project.cover_image_url.startsWith("covers/") && !project.cover_image_url.includes("supabase.co")
+                ? project.cover_image_url
+                : "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80")
+            }
             alt={project.name}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80";
+            }}
             className="w-full h-full object-cover opacity-60"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />

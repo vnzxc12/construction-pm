@@ -439,15 +439,15 @@ CREATE TRIGGER on_auth_user_created
 -- ------------------------------------------------------------------------------
 INSERT INTO storage.buckets (id, name, public, file_size_limit) 
 VALUES 
-  ('project-documents', 'project-documents', true, 104857600),
-  ('blueprints', 'blueprints', true, 104857600),
-  ('site-photos', 'site-photos', true, 52428800),
-  ('punch-photos', 'punch-photos', true, 52428800)
+  ('project-documents', 'project-documents', false, 104857600),
+  ('blueprints', 'blueprints', false, 104857600),
+  ('site-photos', 'site-photos', false, 52428800),
+  ('punch-photos', 'punch-photos', false, 52428800)
 ON CONFLICT (id) DO UPDATE SET
-  public = true,
+  public = false,
   file_size_limit = EXCLUDED.file_size_limit;
 
--- Storage RLS: Allow authenticated, anon & public access for project storage
+-- Storage RLS: Restrict storage access strictly to authenticated users for private buckets
 DROP POLICY IF EXISTS "Authenticated users can upload objects" ON storage.objects;
 DROP POLICY IF EXISTS "Public read for project storage" ON storage.objects;
 DROP POLICY IF EXISTS "storage_objects_select_policy" ON storage.objects;
@@ -455,24 +455,31 @@ DROP POLICY IF EXISTS "storage_objects_insert_policy" ON storage.objects;
 DROP POLICY IF EXISTS "storage_objects_update_policy" ON storage.objects;
 DROP POLICY IF EXISTS "storage_objects_delete_policy" ON storage.objects;
 
+-- Explicit SELECT access for authenticated users
 CREATE POLICY "storage_objects_select_policy"
   ON storage.objects FOR SELECT
-  TO authenticated, anon, public
+  TO authenticated
   USING (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
 
+-- Explicit INSERT access for authenticated users
 CREATE POLICY "storage_objects_insert_policy"
   ON storage.objects FOR INSERT
-  TO authenticated, anon, public
+  TO authenticated
   WITH CHECK (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
 
+-- Explicit UPDATE access for authenticated users
 CREATE POLICY "storage_objects_update_policy"
   ON storage.objects FOR UPDATE
-  TO authenticated, anon, public
+  TO authenticated
   USING (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'))
   WITH CHECK (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
 
+-- Explicit DELETE access for authenticated users
 CREATE POLICY "storage_objects_delete_policy"
   ON storage.objects FOR DELETE
-  TO authenticated, anon, public
+  TO authenticated
   USING (bucket_id IN ('project-documents', 'blueprints', 'site-photos', 'punch-photos'));
+
+GRANT ALL ON storage.objects TO authenticated, service_role, postgres;
+GRANT ALL ON storage.buckets TO authenticated, service_role, postgres;
 
