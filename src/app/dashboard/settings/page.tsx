@@ -14,6 +14,7 @@ import {
   AlertCircle,
   X,
   Key,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, UserRole } from "@/types/database";
@@ -45,18 +46,16 @@ export default function SettingsPage() {
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (myProfile) {
         setCurrentUser(myProfile);
       } else {
-        setCurrentUser({
-          id: user.id,
-          email: user.email || "",
-          full_name: "Admin",
-          role: (user.user_metadata?.role as UserRole) || "admin",
-          created_at: new Date().toISOString(),
-        });
+        // Current account was deleted from profiles - sign out immediately
+        console.warn("Current user profile not found. Signing out.");
+        await supabase.auth.signOut();
+        window.location.href = "/login";
+        return;
       }
     }
 
@@ -78,6 +77,39 @@ export default function SettingsPage() {
   }, []);
 
   const canManageUsers = currentUser?.role === "admin" || currentUser?.role === "project_manager";
+
+  const handleDeleteUser = async (userToDelete: Profile) => {
+    if (userToDelete.role === "admin" || userToDelete.id === currentUser?.id) {
+      alert("Administrator and self accounts cannot be deleted.");
+      return;
+    }
+
+    const usernameDisplay = userToDelete.email ? userToDelete.email.split("@")[0] : "user";
+    if (!confirm(`Are you sure you want to permanently delete account "${userToDelete.full_name}" (@${usernameDisplay})?\n\nThis will immediately revoke their access and deactivate their login credentials.`)) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userToDelete.id);
+
+      if (error) {
+        setFeedback({ type: "error", message: `Failed to delete account: ${error.message}` });
+        return;
+      }
+
+      setAllUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
+      setFeedback({
+        type: "success",
+        message: `Account for "${userToDelete.full_name}" (@${usernameDisplay}) has been permanently deleted and access revoked.`,
+      });
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err?.message || "Failed to delete account." });
+    }
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,12 +240,15 @@ export default function SettingsPage() {
                   <th className="px-4 py-3">Assigned Role</th>
                   <th className="px-4 py-3">Organization</th>
                   <th className="px-4 py-3 text-right">Access</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {allUsers.map((u) => {
                   const usernameDisplay = u.email ? u.email.split("@")[0] : "user";
                   const isAdmin = u.role === "admin";
+                  const isSelf = u.id === currentUser?.id;
+
                   return (
                     <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="px-4 py-3.5">
@@ -248,6 +283,22 @@ export default function SettingsPage() {
                         <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
                           <ShieldCheck className="w-3.5 h-3.5" /> Active
                         </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        {canManageUsers && !isAdmin && !isSelf ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                            title={`Permanently delete @${usernameDisplay}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {isAdmin ? "Admin" : isSelf ? "Current" : "Protected"}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

@@ -44,7 +44,7 @@ export function Header() {
             .from("profiles")
             .select("full_name, email, role, avatar_url")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
 
           if (dbProfile) {
             setProfile({
@@ -54,12 +54,11 @@ export function Header() {
               avatarUrl: dbProfile.avatar_url,
             });
           } else {
-            const metaName = user.user_metadata?.full_name;
-            setProfile({
-              name: metaName || user.email?.split("@")[0] || "Admin",
-              email: user.email || "",
-              role: (user.user_metadata?.role as string) || "admin",
-            });
+            // User was deleted from profiles directory - clear session and redirect to login
+            console.warn("User account not found in profiles. Signing out.");
+            await supabase.auth.signOut();
+            router.replace("/login");
+            return;
           }
         }
       } catch (err) {
@@ -91,14 +90,22 @@ export function Header() {
           .from("profiles")
           .select("full_name, email, role, avatar_url")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
-        setProfile({
-          name: dbProfile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Admin",
-          email: dbProfile?.email || user.email || "",
-          role: dbProfile?.role || (user.user_metadata?.role as string) || "admin",
-          avatarUrl: dbProfile?.avatar_url,
-        });
+        if (dbProfile) {
+          setProfile({
+            name: dbProfile.full_name || user.email?.split("@")[0] || "Admin",
+            email: dbProfile.email || user.email || "",
+            role: dbProfile.role || "admin",
+            avatarUrl: dbProfile.avatar_url,
+          });
+        } else {
+          // Stale session of a deleted user detected during auth state change
+          console.warn("Stale session detected for deleted user. Signing out.");
+          await supabase.auth.signOut();
+          router.replace("/login");
+          return;
+        }
       }
     });
 

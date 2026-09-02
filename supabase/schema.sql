@@ -434,6 +434,24 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+-- Trigger to automatically delete the user from auth.users when their profile is deleted
+CREATE OR REPLACE FUNCTION public.handle_profile_deleted()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_profile_deleted ON public.profiles;
+CREATE TRIGGER on_profile_deleted
+  AFTER DELETE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.handle_profile_deleted();
+
 -- ------------------------------------------------------------------------------
 -- 5. STORAGE BUCKETS SETUP (Run in Supabase SQL Editor)
 -- ------------------------------------------------------------------------------

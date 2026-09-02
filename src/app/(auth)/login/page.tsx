@@ -32,6 +32,20 @@ export default function SplitLoginPage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Verify that user still exists in active profiles
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (!profile) {
+            console.warn("User profile not found. Clearing stale session.");
+            await supabase.auth.signOut();
+            setCheckingAuth(false);
+            return;
+          }
+
           router.replace("/dashboard");
           return;
         }
@@ -58,6 +72,7 @@ export default function SplitLoginPage() {
         if (rawInput === "admin") {
           targetEmail = "admin@mbsdesign.com";
         } else {
+          // Look up user strictly in active profiles directory
           const { data: profile } = await supabase
             .from("profiles")
             .select("email")
@@ -68,29 +83,20 @@ export default function SplitLoginPage() {
           if (profile?.email) {
             targetEmail = profile.email;
           } else {
-            targetEmail = `${rawInput}@mbsdesign.com`;
+            // User does not exist in profiles directory - deny login immediately
+            setError("Account not found or access has been revoked. Please check your credentials.");
+            setLoading(false);
+            return;
           }
         }
       }
 
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: targetEmail,
         password,
       });
 
       if (authError) {
-        if (!rawInput.includes("@") && targetEmail.endsWith("@mbsdesign.com")) {
-          const secondTry = await supabase.auth.signInWithPassword({
-            email: `${rawInput}@test.com`,
-            password,
-          });
-
-          if (!secondTry.error) {
-            router.push("/dashboard");
-            return;
-          }
-        }
-
         setError(
           authError.message === "Invalid login credentials"
             ? "Invalid username or password. Please check your credentials."
@@ -98,6 +104,23 @@ export default function SplitLoginPage() {
         );
         setLoading(false);
         return;
+      }
+
+      // Verify that profile row exists (blocks deleted users whose auth accounts haven't been purged)
+      if (authData.user) {
+        const { data: profileRecord } = await supabase
+          .from("profiles")
+          .select("id, role, full_name")
+          .eq("id", authData.user.id)
+          .maybeSingle();
+
+        if (!profileRecord) {
+          // Account was deleted from profiles table
+          await supabase.auth.signOut();
+          setError("This account has been deleted or deactivated. Access is denied.");
+          setLoading(false);
+          return;
+        }
       }
 
       router.push("/dashboard");
